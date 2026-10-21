@@ -398,6 +398,7 @@ export default async function Home() {
           <div className="footer-bottom">
             <span>© {brand.legalName}</span>
             <div>
+              <a href="/portal">پرتال مشتری</a>
               <a href="/privacy">{content.text65}</a>
               <a href="/terms">{content.text66}</a>
               <a href={officialDvUrl} target="_blank" rel="noreferrer">

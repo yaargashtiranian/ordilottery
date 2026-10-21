@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { brand } from "@/lib/site";
 
 const links = [
-  ["روایت یک شروع", "story"],
-  ["مسیر ثبت‌نام", "journey"],
-  ["خدمات و تعرفه‌ها", "services"],
-  ["سؤال‌های شما", "faq"],
+  ["روایت یک شروع", "#story"],
+  ["مسیر ثبت‌نام", "#journey"],
+  ["خدمات و تعرفه‌ها", "#services"],
+  ["سؤال‌های شما", "#faq"],
+  ["پرتال مشتری", "/portal"],
 ];
 
 /** Native details keeps the mobile menu usable without a dialog dependency. */
@@ -24,7 +25,7 @@ export function Navigation() {
         </a>
         <nav className="desktop-navigation" aria-label="ناوبری اصلی">
           {links.map(([label, id]) => (
-            <a key={id} href={`#${id}`}>
+            <a key={id} href={id}>
               {label}
             </a>
           ))}
@@ -51,7 +52,7 @@ export function Navigation() {
             {links.map(([label, id]) => (
               <a
                 key={id}
-                href={`#${id}`}
+                href={id}
                 onClick={() => {
                   if (menu.current) menu.current.open = false;
                 }}
