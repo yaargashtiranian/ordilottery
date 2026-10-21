@@ -10,16 +10,16 @@ export type NotificationOutcome =
   | { status: "record_failed"; sendStatus: SmsResult["status"] }
   | { status: SmsResult["status"] };
 
-/** Use WP's durable, atomic claim; process memory/files are not a deduplication store. */
+/** Use the adapter’s durable, atomic claim; process memory/files are not a deduplication store. */
 export async function notifyRegistration(
-  wordpress: CheckoutConfig,
+  provider: CheckoutConfig,
   sms: MelipayamakConfig,
   requestId: string,
   fetcher: typeof fetch = fetch,
 ): Promise<NotificationOutcome> {
-  const endpoint = `${wordpress.apiUrl}/requests/${encodeURIComponent(requestId)}/notifications/registration`;
+  const endpoint = `${provider.apiUrl}/requests/${encodeURIComponent(requestId)}/notifications/registration`;
   const headers = {
-    Authorization: `Bearer ${wordpress.token}`,
+    Authorization: `Bearer ${provider.token}`,
     "Content-Type": "application/json",
   };
   let notificationId: string;

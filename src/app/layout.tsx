@@ -44,7 +44,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" data-scroll-behavior="smooth">
       <body>
         <DirectionProvider>{children}</DirectionProvider>
       </body>

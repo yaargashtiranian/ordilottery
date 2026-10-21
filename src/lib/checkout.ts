@@ -48,7 +48,7 @@ async function readSmallJson(request: Request) {
   return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
 }
 
-/** Proposed WP bridge contract; tests inject fetch without sending real applications. */
+/** Injectable provider contract for isolated tests; the public route always supplies null. */
 export async function handleRegistration(
   request: Request,
   config: CheckoutConfig | null,
@@ -149,7 +149,7 @@ export async function handleRegistration(
     }
     return response({ checkoutUrl: destination.href }, 201);
   } catch {
-    // Never return raw WP error bodies, credentials or applicant data to the client.
+    // Never return raw provider error bodies, credentials or applicant data to the client.
     return response(
       {
         message:

@@ -24,6 +24,115 @@ the unconfigured site works without credentials in an explicitly labeled form pr
 
 ## Validation
 
+### Private case documents
+
+Open a case under `/backoffice/cases` to use **مدارک و بررسی کارشناس**.
+Staff can preview images, download PDFs, approve/reject with a customer-visible
+explanation, and upload new documents or immutable versions. Older versions retain
+their own review state. Overall case review remains a separate expert decision.
+
+Staff enable customer intake per case. Customers visit `/portal`, create an email/password
+Supabase account with their case email, confirm their email, then sign in. Account
+creation does not grant staff membership or create a CRM record. Configure Supabase
+Auth redirect allowlists for the deployed `/portal` origin. No SMS/OTP provider is added.
+
+Configure `DOCUMENTS_ENCRYPTION_KEY` securely on the application server: 64 hex
+characters representing 32 random bytes. Local setup generated this key in ignored
+`.env.local`; its value is never logged or committed. Back up this key separately:
+it is required to recover every encrypted version. Do not rotate by replacing it
+without a migration/re-encryption procedure. Missing key disables uploads.
+
+Files (JPEG/PNG/PDF, maximum 5 MiB before encryption) are authenticated with AES-256-GCM,
+bound to case/version IDs and SHA-256 checked on download. The private `case-documents`
+bucket stores a primary ciphertext and a recovery ciphertext. Both must persist before
+an upload succeeds. Staff can **دریافت از پشتیبان** if the primary is unavailable.
+These are copies in the same Supabase project, not an independent disaster-recovery backup.
+Never use the public Storage URL or send document URLs to analytics. PDFs are downloaded
+as attachments; image previews use the authenticated, uncached API. Technical checks
+are not malware scanning or official DV photo validation.
+
+Completion/cancellation starts a 90-day deadline; reopening clears it. Storage and API
+use the database clock for expiry. Access closes at the deadline; staff use the expired
+case's **پاک‌سازی فایل‌های منقضی** action to delete both copies through the Storage API.
+No automatic purge scheduler has been deployed. Metadata/review audit remains after
+file erasure. Never delete Storage metadata directly as a substitute for the Storage API.
+
+`supabase/tests/documents_access.sql` checks ownership/reviews/versioning with a full rollback.
+`scripts/qa-documents-live.ts` provides an explicitly controlled synthetic integration harness
+(`setup`, `verify`, `expire`, `purge`, `cleanup-sql`): setup/expire/cleanup print SQL for the
+authorized operator, while verify/purge use localhost:3000 and native Auth/Storage.
+Run with `node --env-file=.env.local --import tsx scripts/qa-documents-live.ts <mode>`.
+It never sends signup emails or uses identity documents. Apply setup SQL before verify,
+expire SQL before purge, and cleanup SQL only after the Storage purge. Temporary credentials
+and screenshots are under ignored `test-results/`; remove the JSON after cleanup.
+
+### Supabase connection
+
+The app connects to Supabase project `Yaargashtirania` through the server-only
+client in `src/lib/supabase.ts`. Configure `SUPABASE_URL` and
+`SUPABASE_PUBLISHABLE_KEY` in `.env.local` (ignored by Git); use the same variables
+in your hosting environment. Never substitute a secret or service-role key.
+
+Run `npm run check:supabase` to verify Data API access to the CMS table, or request
+`GET /api/health/supabase` from the running app. It returns HTTP 200 with
+`{"supabase":"connected"}` or HTTP 503 with `{"supabase":"unavailable"}`.
+The check selects one public page slug without reading drafts or creating records.
+CMS tables and administrator authentication are configured; applicant persistence
+is not part of this content management flow.
+Public checkout and automatic SMS remain disabled pending direct integrations.
+
+The client follows the official [initialization guide](https://supabase.com/docs/reference/javascript/initializing)
+and uses [select](https://supabase.com/docs/reference/javascript/select)
+for the connectivity check.
+
+### Backoffice and page content
+
+Open `/backoffice` (unauthenticated visitors go to `/backoffice/login`). The Persian
+RTL content editor at `/backoffice/content` uses the existing shadcn/ui components to edit the home,
+privacy and terms pages. Saving a draft does not change the live page; publishing
+atomically updates its public copy. Concurrent edits return HTTP 409 and retain
+the editor's unsaved text. Published content is server-rendered on each request;
+no rebuild is needed after publication. If Supabase is temporarily unavailable,
+public pages retain the bundled original copy and log a sanitized warning.
+
+For the first administrator, configure `BACKOFFICE_ADMIN_EMAIL` in `.env.local`
+and insert that lowercase email into `public.cms_editors` through the Supabase SQL
+editor. The requested owner's email is already allowed in the connected project.
+Choose **اولین ورود؟ ساخت حساب مدیر** on the login screen, use that email, choose
+your password privately, and confirm the email before signing in. This workflow
+does not create an account or send email until you submit the form. The same email
+must appear in Supabase Auth and the editor allowlist. Supabase Dashboard account
+administrators and app content editors are separate identities.
+
+In Supabase Auth, allow your actual site's `/backoffice/login` redirect URL under
+URL Configuration and configure your email provider for production delivery.
+Local development uses `http://localhost:3000/backoffice/login`. Session cookies
+are HTTP-only and SameSite=Lax, with Secure enabled in production. For deliberate
+local production testing over HTTP only, `BACKOFFICE_LOCAL_HTTP=true` disables
+Secure; do not set this on hosted deployments. No service-role key is used.
+
+Database migration: `supabase/migrations/20261021133642_backoffice_content.sql`.
+It is already applied to the connected project; it seeds the original public
+copy without storing user emails in Git. Both tables use RLS. Anonymous users can
+select only published columns; authenticated non-editors cannot read drafts or
+update pages, and users cannot grant themselves editor membership.
+`supabase/tests/content_access.sql` checks these rules and draft/publish/version
+behavior in a transaction that rolls back all synthetic changes.
+
+API endpoints (all private responses use `Cache-Control: no-store`):
+
+- `POST /api/backoffice/session`: login or initial-owner registration.
+- `DELETE /api/backoffice/session`: local session sign-out.
+- `GET /api/backoffice/pages`: authenticated editor's drafts and publication state.
+- `PATCH /api/backoffice/pages/{home|privacy|terms}`: authenticated save/publish,
+  with `{ action: "save" | "publish", content, revision }`.
+
+Writes validate origin, bounded JSON, known fields and revision. Page copy is
+rendered as text, never executable HTML. Layout, prices, campaign verification,
+payments, SMS and applicant forms remain outside the page-copy editor.
+
+### Project checks
+
 ```bash
 npm run lint
 npm run format:check
@@ -34,12 +143,13 @@ npm run start
 ```
 
 Browser checks use Playwright and the host Chromium in this cloud environment.
-Build the preview variant explicitly so tests cannot contact a real CMS or collect
-applications. Playwright starts its own production server and refuses to reuse an
+Disable payment and applicant collection for browser checks. Public CMS reads may
+contact Supabase; tests do not sign up users, send email or publish content.
+Playwright starts its own production server and refuses to reuse an
 existing process on its test port:
 
 ```bash
-ENABLE_CHECKOUT=false ENABLE_MELIPAYAMAK=false WORDPRESS_CONTENT_URL= SITE_URL= ALLOW_INDEXING=false npm run build
+ENABLE_CHECKOUT=false ENABLE_MELIPAYAMAK=false SITE_URL= ALLOW_INDEXING=false npm run build
 npm run test:e2e
 ```
 
@@ -53,127 +163,61 @@ adjust the documented executable setting in `playwright.config.ts`.
 - `src/app/page.tsx`: server-rendered narrative; client islands handle navigation,
   FAQ, selection, form validation and optional scroll effects.
 - `src/lib/registration.ts`: shared four-field input contract and Persian digits.
-- `src/lib/checkout.ts`: bounded JSON input and proposed WordPress bridge request.
-- `src/lib/wordpress-content.ts`: small optional JSON content integration with
-  five-minute revalidation and safe local fallback.
+- `src/lib/checkout.ts`: bounded public-form validation and injectable provider-contract tests.
+- `src/lib/content-store.ts`: published Supabase copy with safe original-copy fallback.
+- `src/lib/content-model.ts` and `page-content.json`: fixed editable page fields.
+- `src/app/backoffice`: administrator workspace and sign-in.
+- `src/app/api/backoffice`: authenticated content/session API.
 
-The actual WordPress installation and the owner's gateway plugins have not been
-provided. No application, payment or document is currently stored. A successful
-local form check is explicitly not a submitted request. No supplementary form is
-publicly accessible without verified payment and applicant authorization.
+## Operational workspace
 
-## Proposed WordPress bridge (not implemented on WordPress)
+The main dashboard at `/backoffice` now opens the operational workspace. Page
+content management remains available at `/backoffice/content`. Other sections:
 
-Configure only after inspecting the owner's existing plugins. The Next.js server
-expects `POST {WORDPRESS_API_URL}/requests` with server-only Bearer authentication
-and `Idempotency-Key`. The JSON includes `applicant` (firstName, lastName, email,
-phone), `plan`, integer `amount`, `currency: "IRT"` (tomans), and `idempotencyKey`.
+- `/backoffice/customers`: private contact records, edit history and related cases.
+- `/backoffice/cases`: service/review states, assignee, follow-up date and timeline.
+- `/backoffice/payments`: immutable manual receipts and financial history.
+- `/backoffice/support`: support requests, status and internal team notes.
 
-The bridge must authorize the call, validate the package and current price,
-persist the request before payment, and reuse the same request/checkout for the
-same key. Reject reuse of a key with a different payload. Successful responses:
+All data is persisted in Supabase through authenticated API routes under
+`/api/backoffice/operations`. No WordPress integration is used or required.
+Lists are searched/filtered server-side and paginated in sets of 20. Detail
+history is bounded and the exact financial total is computed separately.
+Only existing administrator allowlist members can read or change these records.
+No customer-facing access is enabled, and no applicant document is uploaded.
 
-```json
-{
-  "requestId": "persisted-private-id",
-  "checkoutUrl": "https://your-allowed-checkout.example/path"
-}
-```
+The operational schema is applied in migrations
+`20261021141102_operations_workspace.sql` and
+`20261021142153_operations_financial_totals.sql`. Re-run
+`supabase/tests/operations_access.sql` through the SQL editor/MCP for the
+transactional access, audit, receipt immutability and idempotency checks. All its
+synthetic data is rolled back; PostgreSQL sequence gaps after tests are normal.
 
-Only an exact configured HTTPS checkout origin is accepted. Redirects from the
-authenticated bridge fetch are refused. Next.js never accepts a browser price or
-uses a redirect as proof of payment. The real WordPress plugin remains responsible
-for provider verification, callback idempotency, amount matching and persistent
-status. Its verified status/authenticated applicant flow must be implemented
-before unlocking the supplementary form or documents. Never expose ordinary
-public WordPress media URLs for identity documents.
+With the existing development server running at `http://localhost:3000`, run
+`npm run test:operations-ui` for the isolated workspace/form browser checks.
+It temporarily mounts a development-only route containing synthetic fixtures,
+intercepts operational API calls, and removes the route in `finally`. It does not
+create real customers, issue charges, send messages or bypass actual route auth.
+An existing file at the fixture path is never overwritten. Use
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when needed; Windows Chrome is detected
+automatically. This is separate from `npm run test:e2e`, which checks real
+production-route access and the public site.
 
-Do not enable checkout merely by adding values: first complete privacy/refund
-terms, private storage, durable rate limiting/abuse controls, plugin compatibility
-and sandbox verification. This bridge is a preparation boundary, not a payment
-system that is ready to charge users.
+Customer/case/ticket edits use optimistic revisions. History and receipts have
+no update/delete grants. Database triggers append the event history atomically;
+initial support requests and notes use idempotent database functions. Create
+requests carry stable UUIDs to prevent duplicates on retries. Case prices are
+set server-side and stored in tomans (IRT), separately from receipt records.
 
-## Transactional SMS — Melipayamak
+## Direct integrations still pending
 
-The first supported event is **request received**, after WordPress persists the
-request and returns a validated checkout URL. It is not a payment confirmation,
-official DV submission, or OTP. The preview never sends SMS. No public arbitrary
-recipient/message endpoint is exposed, and no new npm dependency was added.
+No direct payment provider has been selected or implemented. Public registration
+remains in preview, and a validated public POST returns 503 without collecting
+data, charging money or sending SMS. Legacy configuration cannot enable checkout.
+The existing injected provider-contract tests do not constitute a live integration.
+Manual receipts are not bank verification; a refund record does not transfer money.
 
-`src/lib/melipayamak.ts` calls the shared service template API at
-`https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber` with HTTPS form
-encoding. The interface was checked against the provider's official Node SDK:
-https://github.com/Melipayamak/melipayamak-node/blob/378e2c47e4b45e8ae699f93744a1e95acde6de5b/src/sms/restAsync.js
-
-Enter `MELIPAYAMAK_USERNAME`, `MELIPAYAMAK_PASSWORD` (web-service/API credential),
-and `MELIPAYAMAK_REGISTRATION_BODY_ID` securely on the server. Do not use
-`NEXT_PUBLIC_*` or paste credentials into chat/Git. The approved template takes
-two variables, in this order: first name, public request reference. For example,
-the approved wording should state that the **service request was received**,
-including the current brand, without claiming payment or official DV success.
-The reference must not be an access token. Allow HTTPS egress to
-`rest.payamak-panel.com` in the deployment network policy.
-
-### Required WordPress bridge extension
-
-These endpoints are a proposed backend contract; they are not installed on the
-owner's WordPress yet. They use the same server-only Bearer authentication:
-
-1. `POST /requests/{requestId}/notifications/registration/claim`, body `{}`.
-   Atomically mark the request's notification as attempted, with one unique
-   durable record per request/event, **before** returning `201`:
-
-   ```json
-   {
-     "notificationId": "sms-unique-id",
-     "to": "09123456789",
-     "firstName": "سارا",
-     "reference": "YG-1001"
-   }
-   ```
-
-   Read recipient/parameters from the persisted request. Return `204` for an
-   existing claim, including accepted, unknown or interrupted attempts. Replays
-   must not issue a new claim. Missing endpoints, errors or malformed claims
-   prevent sending. Claims do not expire into automatic resend authorization.
-
-2. `POST /requests/{requestId}/notifications/registration/result`, body containing
-   `notificationId`, `status` and either `providerId` for `accepted` or a sanitized
-   `reason` for `rejected`/`unknown`. Validate ownership and update idempotently
-   using `Idempotency-Key: sms-result:{notificationId}`. Only this authenticated
-   service may mutate notification state; request/notification IDs alone confer
-   no authorization.
-
-Next.js `after()` schedules the notification after returning the checkout response,
-so notification latency/failure does not interrupt checkout. Deploy on a host
-supporting the Node Next.js post-response lifecycle (30-second route budget).
-Persistent claims prevent repeated send attempts, but cannot guarantee delivery:
-a crash between claiming/sending or an uncertain response needs manual
-reconciliation. There is no automatic resend worker. Failure to write a result
-does not release the original claim. The WordPress dashboard must show attempted
-and uncertain notifications for operator review.
-
-`accepted` means provider acceptance, **not handset delivery**. HTTP failures,
-timeouts and malformed responses are uncertain and never automatically retried.
-Large provider IDs remain strings. The server logs only a generic bridge failure
-status when claiming/recording fails, never recipients, message bodies or secrets.
-
-After the bridge, approved template and real account have been checked, enable
-`ENABLE_MELIPAYAMAK=true`. Merely setting credentials does not implement the WP
-extension. No live SMS has been sent or delivery verified. Other status messages
-and OTP require separate event/authentication design; they are not claimed here.
-
-## Content and launch
-
-No official DV date is configured. A sourced future date enables an informational
-countdown; expiry never automatically opens official registration. Passport and
-official fee changes have not been independently verified in this environment.
-
-Regular and preregistration package prices are the owner's planned tariffs, not
-historical sales or independently researched market averages. No fake discount
-deadline or scarcity is generated.
-
-Set the final `SITE_URL`, review the logo/contact details, current DV sources,
-prices, legal terms and integrations before launch. Keep `ALLOW_INDEXING=false`
-for previews. Rebuild after changing environment settings used in server-rendered
-pages. No external deployment or publication has been performed.
+The server-side Melipayamak adapter and its isolated provider tests remain, but
+public registration no longer invokes the retired external notification bridge.
+Automatic messaging needs a durable Supabase claim and provider verification
+before activation. Support notes are internal; they do not send email or SMS.

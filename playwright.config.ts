@@ -38,7 +38,6 @@ export default defineConfig({
     env: {
       ENABLE_CHECKOUT: "false",
       ENABLE_MELIPAYAMAK: "false",
-      WORDPRESS_CONTENT_URL: "",
       SITE_URL: "",
       ALLOW_INDEXING: "false",
     },

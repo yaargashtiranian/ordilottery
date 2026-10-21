@@ -37,10 +37,14 @@ export const questions = [
 ] as const;
 
 /** Radix supplies keyboard navigation and accurate expanded/control semantics. */
-export function Faq() {
+export function Faq({
+  questions: items = questions,
+}: {
+  questions?: readonly (readonly string[])[];
+}) {
   return (
     <Accordion type="single" collapsible className="faq-list">
-      {questions.map(([question, answer], index) => (
+      {items.map(([question, answer], index) => (
         <AccordionItem key={question} value={`question-${index}`}>
           <AccordionTrigger>{question}</AccordionTrigger>
           <AccordionContent>{answer}</AccordionContent>

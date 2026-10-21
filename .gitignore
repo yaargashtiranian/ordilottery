@@ -1,4 +1,7 @@
 node_modules/
+.npm-cache/
+supabase/.temp/
+supabase/.branches/
 .next/
 out/
 coverage/

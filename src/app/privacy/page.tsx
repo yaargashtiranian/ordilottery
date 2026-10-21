@@ -1,6 +1,9 @@
+import { getPageContent } from "@/lib/content-store";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Brand } from "@/components/brand";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "حریم خصوصی",
@@ -9,52 +12,28 @@ export const metadata: Metadata = {
 };
 
 /** Describe current behavior honestly; final operational terms precede collection. */
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const content = await getPageContent("privacy");
   return (
     <main className="legal-page">
       <Link href="/" aria-label="بازگشت به صفحه اصلی">
         <Brand />
       </Link>
-      <h1>حریم خصوصی شما</h1>
-      <p>
-        این صفحه، پیش‌نویس سیاست حریم خصوصی نسخه اولیه است. دریافت درخواست،
-        پرداخت و مدارک واقعی در این نسخه فعال نیست.
-      </p>
-      <h2>فرم فعلی چه می‌کند؟</h2>
-      <p>
-        اطلاعات واردشده فقط در حافظه همین صفحه برای بررسی ساختار فرم استفاده
-        می‌شود. در حالت پیش‌نمایش به سرور ارسال و در مرورگر ذخیره دائمی نمی‌شود.
-        با بستن یا تازه‌کردن صفحه از دست می‌رود.
-      </p>
-      <h2>پیش از فعال شدن خدمات</h2>
-      <p>
-        روش دریافت و نگهداری اطلاعات، ارائه‌دهندگان زیرساخت، افراد دارای دسترسی،
-        مدت نگهداری، شرایط حذف و راه ارتباط برای درخواست اصلاح یا حذف باید تکمیل
-        و اعلام شوند.
-      </p>
-      <h2>مدارک هویتی</h2>
-      <p>
-        در این نسخه هیچ مدرکی دریافت نمی‌شود. پیش از فعال شدن مرحله مدارک، شیوه
-        ارسال خصوصی و شرایط نگهداری آن‌ها مشخص خواهد شد. مدرک واقعی را در فرم
-        تماس یا نشانی عمومی ارسال نکنید.
-      </p>
-      <h2>پیامک‌های خدماتی</h2>
-      <p>
-        اتصال پیامک ملی‌پیامک برای اطلاع‌رسانی دریافت درخواست خدمات در نظر گرفته
-        شده است. ارسال در نسخه پیش‌نمایش خاموش است. پس از فعال‌سازی، شماره
-        موبایل، نام کوچک و کد پیگیری درخواست برای ارسال قالب تأییدشده در اختیار
-        ملی‌پیامک قرار می‌گیرد؛ مدارک هویتی و اطلاعات پرداخت در پیامک ارسال
-        نمی‌شوند. پذیرش پیام توسط سرویس به معنی تحویل آن به گوشی نیست و پیامک
-        دریافت درخواست، تأیید پرداخت یا ثبت رسمی لاتاری محسوب نمی‌شود.
-      </p>
-      <h2>ابزارهای سنجش</h2>
-      <p>
-        در کد این نسخه، ابزار تبلیغاتی یا تحلیل رفتار کاربر اضافه نشده است.
-        سرویس میزبانی ممکن است طبق سیاست خودش لاگ فنی ایجاد کند؛ جزئیات پس از
-        انتخاب میزبان نهایی اعلام می‌شود.
-      </p>
+      <h1>{content.text1}</h1>
+      <p> {content.text2} </p>
+      <h2>{content.text3}</h2>
+      <p> {content.text4} </p>
+      <h2>{content.text5}</h2>
+      <p> {content.text6} </p>
+      <h2>{content.text7}</h2>
+      <p> {content.text8} </p>
+      <h2>{content.text9}</h2>
+      <p> {content.text10} </p>
+      <h2>{content.text11}</h2>
+      <p> {content.text12} </p>
       <Link className="inline-link" href="/">
-        بازگشت به صفحه اصلی ←
+        {" "}
+        {content.text13}{" "}
       </Link>
     </main>
   );

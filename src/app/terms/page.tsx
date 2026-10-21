@@ -1,6 +1,9 @@
+import { getPageContent } from "@/lib/content-store";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Brand } from "@/components/brand";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "شرایط خدمات",
@@ -9,49 +12,32 @@ export const metadata: Metadata = {
 };
 
 /** This draft avoids inventing refund, booking or photography commitments. */
-export default function TermsPage() {
+export default async function TermsPage() {
+  const content = await getPageContent("terms");
   return (
     <main className="legal-page">
       <Link href="/" aria-label="بازگشت به صفحه اصلی">
         <Brand />
       </Link>
-      <h1>شرایط خدمات</h1>
-      <p>
-        این شرایط، پیش‌نویس نسخه اولیه است. ثبت درخواست و پرداخت هنوز فعال نشده
-        و نسخه نهایی پیش از دریافت وجه اعلام می‌شود.
-      </p>
-      <h2>ماهیت خدمت</h2>
-      <p>
-        خدمت شرکت، راهنمایی، بررسی اطلاعات و مدارک و پیگیری درخواست در حدود
-        توافق است. پیش‌ثبت‌نام خدمات از ثبت در سامانه رسمی DV جداست. ثبت رسمی
-        صرفاً در بازه معتبر و پس از تکمیل اطلاعات انجام می‌شود.
-      </p>
-      <h2>تعرفه و اقلام بسته</h2>
-      <p>
-        قیمت‌های صفحه، برنامه پیشنهادی تعرفه خدمات به تومان و به‌ازای هر نفر
-        است. تعرفه عادی برنامه‌ریزی‌شده به معنای سابقه فروش قبلی نیست. هزینه
-        رسمی احتمالی، عکاسی و خدمات پس از انتخاب شدن، در صورت نیاز و پس از توافق
-        جداگانه تعیین می‌شوند.
-      </p>
-      <h2>نتیجه درخواست</h2>
-      <p>
-        پرداخت هزینه خدمات شانس انتخاب شدن را افزایش نمی‌دهد. انتخاب شدن، پذیرش
-        پرونده یا صدور ویزا تضمین نمی‌شود. شرکت ارائه‌دهنده مستقل خدمات است و
-        نماینده دولت آمریکا نیست.
-      </p>
-      <h2>مواردی که باید نهایی شوند</h2>
+      <h1>{content.text1}</h1>
+      <p> {content.text2} </p>
+      <h2>{content.text3}</h2>
+      <p> {content.text4} </p>
+      <h2>{content.text5}</h2>
+      <p> {content.text6} </p>
+      <h2>{content.text7}</h2>
+      <p> {content.text8} </p>
+      <h2>{content.text9}</h2>
       <ul>
-        <li>شرایط لغو، استرداد و رسیدگی به اختلاف</li>
-        <li>مدت انجام خدمت و مسئولیت اصلاح اطلاعات</li>
-        <li>محل و زمان خدمت حضوری و اقلام دقیق بسته</li>
-        <li>اطلاعات حقوقی و کانال رسمی پشتیبانی</li>
+        <li>{content.text10}</li>
+        <li>{content.text11}</li>
+        <li>{content.text12}</li>
+        <li>{content.text13}</li>
       </ul>
-      <p>
-        تا تکمیل این موارد و اتصال معتبر پرداخت، دریافت وجه از این سایت فعال
-        نخواهد شد.
-      </p>
+      <p> {content.text14} </p>
       <Link className="inline-link" href="/">
-        بازگشت به صفحه اصلی ←
+        {" "}
+        {content.text15}{" "}
       </Link>
     </main>
   );

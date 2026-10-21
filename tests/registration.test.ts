@@ -209,7 +209,7 @@ test("rejects invalid JSON and oversized actual bodies even without Content-Leng
   );
 });
 
-test("invalid fields fail before any WordPress request", async () => {
+test("invalid fields fail before any provider service request", async () => {
   const response = await handleRegistration(
     request({ ...valid, email: "broken" }),
     config,
@@ -265,7 +265,7 @@ test("retries carry the same idempotency key to the bridge", async () => {
   await handleRegistration(request(), config, fetcher);
   await handleRegistration(request(), config, fetcher);
   assert.deepEqual(keys, [valid.idempotencyKey, valid.idempotencyKey]);
-  // Persistent deduplication itself must be verified on the real WordPress plugin.
+  // Persistent deduplication itself must be verified on the real provider service plugin.
 });
 
 for (const destination of [

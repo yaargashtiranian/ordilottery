@@ -1,5 +1,8 @@
 .next/
 node_modules/
+.npm-cache/
+supabase/.temp/
+supabase/.branches/
 playwright-report/
 test-results/
 package-lock.json

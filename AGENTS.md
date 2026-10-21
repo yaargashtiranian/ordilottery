@@ -12,14 +12,14 @@
 
 ## Build the smallest maintainable solution
 
-- Intended stack: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui, limited GSAP, and headless WordPress.
+- Intended stack: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui, limited GSAP, and Supabase Auth/Postgres.
 - Prefer Server Components. Add client components only where interaction requires them. Keep animation code scoped and clean up GSAP effects on unmount.
 - Use compatible supported versions at implementation time, one package manager, and a committed lockfile. Do not copy dependency versions from the reference repository without checking them.
 - Use existing shadcn primitives and native platform capabilities before adding packages or abstractions.
-- Keep application code organized by actual features. No speculative frameworks, microservices, multi-tenant system, custom page builder, or separate admin dashboard.
+- Keep application code organized by actual features. No speculative frameworks, microservices, multi-tenant system or custom page builder. The user authorized a shadcn/ui backoffice for public content, customers, cases, manual receipt records, progress tracking and internal support on 2026-10-21.
 - Centralize brand identity, contact details, assets and design tokens. Support a configurable brand, not a multi-tenant runtime.
-- Keep provider-specific payment and WordPress calls behind small server-side boundaries. Do not create a general plugin framework.
-- Existing WordPress and the owner's gateway plugins are the intended payment foundation. Do not add a parallel direct gateway integration in Next.js. Inspect plugin compatibility before deciding whether WooCommerce or another order mechanism is necessary.
+- Keep provider-specific payment and Supabase calls behind small server-side boundaries. Do not create a general plugin framework.
+- The user explicitly removed WordPress/WooCommerce from the architecture. Supabase is the durable source; implement a direct payment provider only after its identity and verification contract are known. Manual receipts never imply gateway verification or execute transfers.
 - Sites, GitHub, and Vercel are requested tools, not evidence that their connectors or deployment credentials are available. Verify capabilities when needed.
 
 ## Visual and interaction requirements
@@ -31,24 +31,25 @@
 - Content and calls to action must remain usable without animation. Do not hide important content behind scroll progress or animation-only rendering.
 - Serve public narrative content as indexable HTML. Keep animation bundles limited; avoid 3D and unnecessary smooth-scroll packages.
 
-## WordPress, payments and applicant documents
+## Supabase, payments and applicant documents
 
-- WordPress manages public content and private requests. Public content endpoints must not expose applicant records or media.
-- Do not assume ordinary WordPress media uploads are private. Verify private storage and authorized download behavior before collecting real documents.
+- Supabase and the authorized backoffice manage public content and private operational records. Public content endpoints must not expose applicant records or media.
+- Do not assume storage buckets or uploaded objects are private. Verify private storage and authorized download behavior before collecting real documents.
 - Do not use Vercel ephemeral disk, browser localStorage or Git as durable storage for applicant records, payments or documents.
-- Keep WordPress credentials, payment keys and private storage credentials on the server. Never include them in `NEXT_PUBLIC_*`, logs, fixtures or committed files.
+- Keep Supabase secrets, payment keys and private storage credentials on the server. Never include them in `NEXT_PUBLIC_*`, logs, fixtures or committed files.
 - Validate all input on the server. Normalize Persian/Arabic digits where appropriate without corrupting names or identifiers.
 - The pre-payment form has exactly four applicant fields: first name, last name, email and phone. Carry the selected service package separately; defer identity/family details to the post-payment supplementary form.
 - Online service follow-up uses messaging and phone calls. In-person scanning and possible photographer support are owner requirements, but location and price inclusions remain unresolved. Do not invent a visit-booking system or assume photography is included.
 - Persist a request before creating its payment. Derive prices server-side, explicitly record currency units, and retain the order's price snapshot.
-- Verify payment server-to-server through the actual WordPress gateway integration, including amount and request identity. Next.js must obtain an authoritative status, not trust browser redirects.
+- Verify payment server-to-server through the actual direct payment provider, including amount and request identity. Next.js must obtain an authoritative status, not trust browser redirects.
 - Handle duplicate callbacks and retries idempotently. Keep payment, document review and service fulfillment states distinct.
-- Melipayamak is the SMS provider. Keep its credentials server-side, use approved service templates, and send only after a durable WordPress notification claim. Never send SMS from the preview form or expose an unauthenticated SMS endpoint. Record provider acceptance separately from delivery; do not automatically retry uncertain sends or assume an expired claim permits resending. OTP is outside the current implemented scope.
+- Melipayamak is the SMS provider. Keep its credentials server-side, use approved service templates, and send only after a durable Supabase notification claim. Never send SMS from the preview form or expose an unauthenticated SMS endpoint. Record provider acceptance separately from delivery; do not automatically retry uncertain sends or assume an expired claim permits resending. OTP is outside the current implemented scope.
 - Report actual persistence and integration failures. Never show a fake success or mark an application officially submitted because payment succeeded.
 - Enforce request ownership for viewing, updating and uploading. A guessable order number is not authentication.
 - Keep document requirements centralized by document type, applicant role and DV cycle. Enforce real file type, size and relevant image constraints server-side as well as client-side.
+- Document review/version uploads and case-scoped customer intake were authorized on 2026-10-21. The owner accepted private Supabase storage, encrypted recovery copies, and retention through case completion plus 90 days. Keep intake closed per case until staff enable it. The current recovery copy shares the Supabase project; do not claim independent/off-site backups or automatic scheduled purging.
 - Collect only needed personal information. Do not send sensitive fields or document URLs to analytics. Agree on storage, retention and recovery before real collection.
-- Choose the smallest supported WordPress integration after inspecting the actual installation and owner's gateway plugins. Do not add GraphQL, OTP providers or another database by default. Use WooCommerce only if the real integration needs it.
+- Keep the backend in Supabase and Next.js; do not reintroduce WordPress, WooCommerce, a parallel database or an unrequested OTP provider.
 
 ## Claims and content accuracy
 

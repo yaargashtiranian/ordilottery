@@ -15,9 +15,9 @@ const sms: MelipayamakConfig = {
   password: "synthetic-api-password",
   registrationBodyId: "1234",
 };
-const wordpress: CheckoutConfig = {
+const provider: CheckoutConfig = {
   apiUrl: "https://cms.example.test/bridge",
-  token: "synthetic-wp-token",
+  token: "synthetic-provider-token",
   allowedOrigins: ["https://checkout.example.test"],
 };
 const message = { to: "۰۹۱۲۳۴۵۶۷۸۹", firstName: "سارا", reference: "YG-1001" };
@@ -164,7 +164,7 @@ test("network/JSON errors are sanitized and never automatically retried", async 
   }
 });
 
-/** Fake WP models the required atomic claim contract; it is not a live WP test. */
+/** The fake models atomic notification claims; it is not a live provider integration. */
 function bridge(
   options: { recordFails?: boolean; smsTimesOut?: boolean } = {},
 ) {
@@ -176,7 +176,7 @@ function bridge(
     if (target.endsWith("/claim")) {
       assert.equal(
         new Headers(init?.headers).get("Authorization"),
-        `Bearer ${wordpress.token}`,
+        `Bearer ${provider.token}`,
       );
       if (claimed) return new Response(null, { status: 204 });
       claimed = true;
@@ -206,8 +206,8 @@ function bridge(
 test("concurrent notification attempts send once only after a durable claim", async () => {
   const fake = bridge();
   const results = await Promise.all([
-    notifyRegistration(wordpress, sms, "request-1", fake.fetcher),
-    notifyRegistration(wordpress, sms, "request-1", fake.fetcher),
+    notifyRegistration(provider, sms, "request-1", fake.fetcher),
+    notifyRegistration(provider, sms, "request-1", fake.fetcher),
   ]);
   assert.deepEqual(results, [{ status: "accepted" }, { status: "skipped" }]);
   assert.equal(fake.providerCalls.length, 1);
@@ -220,7 +220,7 @@ test("missing bridge/claim errors do not send any SMS", async () => {
   for (const status of [200, 401, 404, 500]) {
     let calls = 0;
     const result = await notifyRegistration(
-      wordpress,
+      provider,
       sms,
       "request-1",
       async () => {
@@ -232,7 +232,7 @@ test("missing bridge/claim errors do not send any SMS", async () => {
     assert.equal(calls, 1);
   }
   assert.deepEqual(
-    await notifyRegistration(wordpress, sms, "request-1", async () => {
+    await notifyRegistration(provider, sms, "request-1", async () => {
       throw new Error("offline");
     }),
     { status: "claim_failed" },
@@ -247,7 +247,7 @@ test("malformed claims and invalid persisted recipients cannot trigger a paid se
   ]) {
     let calls = 0;
     const result = await notifyRegistration(
-      wordpress,
+      provider,
       sms,
       "request-1",
       async () => {
@@ -260,7 +260,7 @@ test("malformed claims and invalid persisted recipients cannot trigger a paid se
   }
   const urls: string[] = [];
   const result = await notifyRegistration(
-    wordpress,
+    provider,
     sms,
     "request-1",
     async (url) => {
@@ -280,11 +280,11 @@ test("malformed claims and invalid persisted recipients cannot trigger a paid se
 test("unknown provider outcome is recorded and a replay does not resend", async () => {
   const fake = bridge({ smsTimesOut: true });
   assert.deepEqual(
-    await notifyRegistration(wordpress, sms, "request-1", fake.fetcher),
+    await notifyRegistration(provider, sms, "request-1", fake.fetcher),
     { status: "unknown" },
   );
   assert.deepEqual(
-    await notifyRegistration(wordpress, sms, "request-1", fake.fetcher),
+    await notifyRegistration(provider, sms, "request-1", fake.fetcher),
     { status: "skipped" },
   );
   assert.equal(fake.providerCalls.length, 1);
@@ -296,11 +296,11 @@ test("unknown provider outcome is recorded and a replay does not resend", async 
 test("result-write failure does not authorize a second SMS", async () => {
   const fake = bridge({ recordFails: true });
   assert.deepEqual(
-    await notifyRegistration(wordpress, sms, "request-1", fake.fetcher),
+    await notifyRegistration(provider, sms, "request-1", fake.fetcher),
     { status: "record_failed", sendStatus: "accepted" },
   );
   assert.deepEqual(
-    await notifyRegistration(wordpress, sms, "request-1", fake.fetcher),
+    await notifyRegistration(provider, sms, "request-1", fake.fetcher),
     { status: "skipped" },
   );
   assert.equal(fake.providerCalls.length, 1);
@@ -336,7 +336,7 @@ test("checkout triggers a notification only for a persisted, validated request",
   assert.equal(notified.length, 0);
   const bad = await handleRegistration(
     incoming(),
-    wordpress,
+    provider,
     async () =>
       Response.json({
         requestId: "request-1",
@@ -356,7 +356,7 @@ test("checkout triggers a notification only for a persisted, validated request",
     (
       await handleRegistration(
         incoming(),
-        wordpress,
+        provider,
         async () => good(),
         undefined,
         notify,
@@ -369,7 +369,7 @@ test("checkout triggers a notification only for a persisted, validated request",
     (
       await handleRegistration(
         incoming(),
-        wordpress,
+        provider,
         async () => good(),
         undefined,
         () => {

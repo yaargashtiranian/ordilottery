@@ -77,7 +77,7 @@ export function ServiceSignup({
     setResult(null);
   }
 
-  /** Validate locally, then hand off only to a real server-configured WP bridge. */
+  /** Validate locally; direct checkout stays disabled until its server integration is verified. */
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current) return;

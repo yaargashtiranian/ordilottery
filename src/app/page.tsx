@@ -24,39 +24,40 @@ import { ScrollEffects } from "@/components/scroll-effects";
 import { ServiceSignup } from "@/components/service-signup";
 import { Faq } from "@/components/faq";
 import { brand, officialDvUrl } from "@/lib/site";
-import { getPublicContent } from "@/lib/wordpress-content";
+import { getPageContent } from "@/lib/content-store";
 import { getCheckoutConfig } from "@/lib/checkout-config";
 
-const steps = [
-  {
-    number: "۰۱",
-    title: "از آشنایی شروع می‌کنیم",
-    text: "نام و اطلاعات تماس را وارد می‌کنید و شیوه همراهی را انتخاب می‌کنید. برای شروع، همین کافی است.",
-    icon: MessageCircle,
-  },
-  {
-    number: "۰۲",
-    title: "با یک مسیر روشن ادامه می‌دهیم",
-    text: "پس از پرداخت تأییدشده هزینه خدمات، فرم تکمیلی و راهنمای آماده‌سازی مدارک در اختیار شماست.",
-    icon: ClipboardCheck,
-  },
-  {
-    number: "۰۳",
-    title: "جزئیات را با دقت بررسی می‌کنیم",
-    text: "متخصص، اطلاعات و مدارک را بررسی می‌کند. اگر چیزی نیاز به اصلاح داشته باشد، قدم بعد را با هم برمی‌داریم.",
-    icon: ScanLine,
-  },
-  {
-    number: "۰۴",
-    title: "تا ثبت نهایی، کنارتان می‌مانیم",
-    text: "ثبت رسمی در بازه اعلام‌شده و پس از تکمیل پرونده انجام می‌شود؛ دریافت درخواست خدمات، به معنی ثبت نهایی نیست.",
-    icon: FileCheck2,
-  },
-];
+export const dynamic = "force-dynamic";
 
 /** Public narrative stays server-rendered; only interactive islands hydrate. */
 export default async function Home() {
-  const content = await getPublicContent();
+  const content = await getPageContent("home");
+  const steps = [
+    {
+      number: "۰۱",
+      title: content.step1,
+      text: content.step2,
+      icon: MessageCircle,
+    },
+    {
+      number: "۰۲",
+      title: content.step3,
+      text: content.step4,
+      icon: ClipboardCheck,
+    },
+    {
+      number: "۰۳",
+      title: content.step5,
+      text: content.step6,
+      icon: ScanLine,
+    },
+    {
+      number: "۰۴",
+      title: content.step7,
+      text: content.step8,
+      icon: FileCheck2,
+    },
+  ];
   const checkoutEnabled = Boolean(getCheckoutConfig());
   const structuredData = {
     "@context": "https://schema.org",
@@ -68,7 +69,8 @@ export default async function Home() {
   return (
     <>
       <a className="skip-link" href="#main">
-        رفتن به محتوای اصلی
+        {" "}
+        {content.text1}{" "}
       </a>
       <Navigation />
       <ScrollEffects />
@@ -86,29 +88,31 @@ export default async function Home() {
               <span className="status-dot" /> {content.eyebrow}
             </span>
             <h1 id="hero-title">
-              هر شروع تازه،
-              <br />
-              از <span className="highlight-word">یک قدم</span> آغاز می‌شود
-              <span className="orange-text">.</span>
+              {" "}
+              {content.text2} <br /> {content.text3}{" "}
+              <span className="highlight-word">{content.text4}</span>{" "}
+              {content.text5} <span className="orange-text">.</span>
             </h1>
             <p className="hero-description">{content.description}</p>
             <div className="hero-actions">
               <Button asChild size="lg" className="button-warm">
                 <a href="#services">
-                  اولین قدم را بردارید <ArrowUpLeft aria-hidden="true" />
+                  {" "}
+                  {content.text6} <ArrowUpLeft aria-hidden="true" />
                 </a>
               </Button>
               <a href="#story" className="quiet-link">
-                اول، بیشتر بدانیم <ArrowDown size={16} aria-hidden="true" />
+                {" "}
+                {content.text7} <ArrowDown size={16} aria-hidden="true" />
               </a>
             </div>
             <div className="hero-reassurance">
               <span>
-                <ShieldCheck size={17} /> بررسی توسط متخصص
+                <ShieldCheck size={17} /> {content.text8}{" "}
               </span>
               <i />
               <span>
-                <MapPin size={17} /> آنلاین و حضوری
+                <MapPin size={17} /> {content.text9}{" "}
               </span>
             </div>
           </div>
@@ -116,7 +120,8 @@ export default async function Home() {
           <div className="hero-status">
             <CampaignStatus />
             <span className="hero-chapter">
-              فصل اول <span /> یک تصمیم تازه
+              {" "}
+              {content.text10} <span /> {content.text11}{" "}
             </span>
           </div>
         </section>
@@ -124,16 +129,16 @@ export default async function Home() {
         <div className="trust-strip">
           <div className="shell trust-inner">
             <span>
-              <BadgeCheck /> دارای مجوز گردشگری
+              <BadgeCheck /> {content.text12}{" "}
             </span>
             <span>
-              <Headphones /> پشتیبانی ۲۴/۷
+              <Headphones /> {content.text13}{" "}
             </span>
             <span>
-              <MapPin /> دفتر در زعفرانیه
+              <MapPin /> {content.text14}{" "}
             </span>
             <span>
-              <ScanLine /> بررسی دقیق مدارک
+              <ScanLine /> {content.text15}{" "}
             </span>
           </div>
         </div>
@@ -146,27 +151,19 @@ export default async function Home() {
         >
           <div className="section-heading" data-reveal>
             <span className="eyebrow">
-              <span className="section-number">۰۱</span> قصه از کجا شروع می‌شود؟
+              <span className="section-number">۰۱</span> {content.text16}{" "}
             </span>
             <h2 id="story-title">
-              گاهی یک فرصت،
-              <br />
-              مسیر تازه‌ای پیش روی ما می‌گذارد.
+              {" "}
+              {content.text17} <br /> {content.text18}{" "}
             </h2>
           </div>
           <div className="story-body" data-reveal>
-            <p className="lead-copy">
-              لاتاری گرین‌کارت، فرصتی برای قدم گذاشتن در یک مسیر تازه است؛ اما
-              قدم اول، شناخت درست آن است.
-            </p>
+            <p className="lead-copy"> {content.text19} </p>
+            <p> {content.text20} </p>
             <p>
-              برنامه Diversity Visa یا DV، مسیر انتخاب متقاضیان برای ادامه
-              فرایند ویزای تنوع آمریکاست. انتخاب شدن، آغاز بررسی پرونده است و
-              به‌تنهایی به معنی دریافت ویزا نیست.
-            </p>
-            <p>
-              ما در {brand.name} برای تصمیم شما وعده نمی‌سازیم؛ کمک می‌کنیم
-              اطلاعات، مدارک و مراحل درخواست را با دقت بیشتری پیش ببرید.
+              {" "}
+              {content.text21} {brand.name} {content.text22}{" "}
             </p>
             <a
               className="inline-link"
@@ -174,9 +171,9 @@ export default async function Home() {
               target="_blank"
               rel="noreferrer"
             >
-              آشنایی با برنامه در منبع رسمی{" "}
-              <ArrowUpLeft size={17} aria-hidden="true" />
-              <span className="sr-only">، در صفحه جدید</span>
+              {" "}
+              {content.text23} <ArrowUpLeft size={17} aria-hidden="true" />
+              <span className="sr-only">{content.text24}</span>
             </a>
           </div>
         </section>
@@ -189,27 +186,25 @@ export default async function Home() {
           <div className="shell journey-grid">
             <div className="journey-aside" data-reveal>
               <span className="eyebrow">
-                <span className="section-number">۰۲</span> مسیر شما، قدم‌به‌قدم
+                <span className="section-number">۰۲</span> {content.text25}{" "}
               </span>
               <h2 id="journey-title">
-                مسیر تازه است.
-                <br />
-                <span className="muted-green">اما تنها نیستید.</span>
+                {" "}
+                {content.text26} <br />
+                <span className="muted-green">{content.text27}</span>
               </h2>
-              <p>
-                قرار نیست از همان ابتدا همه‌چیز را بدانید. مسیر را به قدم‌های
-                کوچک و روشن تقسیم کرده‌ایم.
-              </p>
+              <p> {content.text28} </p>
               <div className="journey-note">
                 <Sprout size={27} strokeWidth={1.3} />
                 <span>
-                  شما تصمیم می‌گیرید.
-                  <br />
-                  <strong>ما همراه مسیر می‌مانیم.</strong>
+                  {" "}
+                  {content.text29} <br />
+                  <strong>{content.text30}</strong>
                 </span>
               </div>
               <a href="#registration" className="inline-link">
-                از اینجا شروع کنیم <MoveLeft size={18} />
+                {" "}
+                {content.text31} <MoveLeft size={18} />
               </a>
             </div>
             <div className="journey-steps">
@@ -237,9 +232,7 @@ export default async function Home() {
           aria-labelledby="documents-title"
         >
           <div className="documents-visual" data-reveal>
-            <span className="eyebrow light-eyebrow">
-              جزئیات کوچک، اهمیت بزرگ
-            </span>
+            <span className="eyebrow light-eyebrow"> {content.text32} </span>
             <div className="photo-example">
               <div className="photo-frame">
                 <svg viewBox="0 0 160 180" fill="none" aria-hidden="true">
@@ -256,11 +249,11 @@ export default async function Home() {
                 <span className="photo-cross top" />
                 <span className="photo-cross bottom" />
               </div>
-              <span className="example-tag">تصویر راهنما؛ مدرک واقعی نیست</span>
+              <span className="example-tag">{content.text33}</span>
             </div>
             <div className="visual-check">
               <Check size={14} />
-              <span>آماده‌سازی با راهنمای متخصص</span>
+              <span>{content.text34}</span>
             </div>
             <span className="visual-caption" dir="ltr">
               DETAILS MAKE THE DIFFERENCE.
@@ -268,46 +261,33 @@ export default async function Home() {
           </div>
           <div className="documents-copy" data-reveal>
             <span className="eyebrow">
-              <span className="section-number">۰۳</span> کمی دقت، خیال راحت‌تر
+              <span className="section-number">۰۳</span> {content.text35}{" "}
             </span>
             <h2 id="documents-title">
-              مدارک درست،
-              <br />
-              یک قدم محکم‌تر.
+              {" "}
+              {content.text36} <br /> {content.text37}{" "}
             </h2>
-            <p>
-              هر مدرک، راهنمای خودش را دارد. در مرحله تکمیلی، دقیقاً می‌دانید چه
-              چیزی لازم است و چطور باید آماده‌اش کنید.
-            </p>
+            <p> {content.text38} </p>
             <ul className="document-features">
               <li>
                 <FileImage />
                 <div>
-                  <h3>عکس، با راهنمای همان دوره</h3>
-                  <p>
-                    ویژگی‌های عکس بر اساس دستورالعمل رسمی بررسی می‌شود؛ کنترل
-                    فایل، جای بررسی متخصص را نمی‌گیرد.
-                  </p>
+                  <h3>{content.text39}</h3>
+                  <p> {content.text40} </p>
                 </div>
               </li>
               <li>
                 <ClipboardCheck />
                 <div>
-                  <h3>اطلاعات کامل، در زمان مناسب</h3>
-                  <p>
-                    ابتدا فقط اطلاعات تماس؛ جزئیات و مدارک هویتی در مرحله تکمیلی
-                    و از مسیر تعیین‌شده دریافت می‌شوند.
-                  </p>
+                  <h3>{content.text41}</h3>
+                  <p> {content.text42} </p>
                 </div>
               </li>
               <li>
                 <ShieldCheck />
                 <div>
-                  <h3>با احترام به اطلاعات شخصی شما</h3>
-                  <p>
-                    قبل از دریافت مدارک، روش ارسال و شرایط نگهداری آن‌ها روشن
-                    خواهد بود.
-                  </p>
+                  <h3>{content.text43}</h3>
+                  <p> {content.text44} </p>
                 </div>
               </li>
             </ul>
@@ -330,31 +310,23 @@ export default async function Home() {
                 <span className="support-card-icon">
                   <Sprout strokeWidth={1.3} />
                 </span>
-                <span>برای فصل‌های بعدی زندگی</span>
-                <strong>همراهی، ادامه دارد.</strong>
+                <span>{content.text45}</span>
+                <strong>{content.text46}</strong>
                 <span className="support-card-line" />
                 <span dir="ltr">YOUR NEXT CHAPTER</span>
               </div>
             </div>
             <div data-reveal>
-              <span className="eyebrow light-eyebrow">
-                این داستان می‌تواند ادامه داشته باشد
-              </span>
+              <span className="eyebrow light-eyebrow"> {content.text47} </span>
               <h2 id="support-title">
-                اگر انتخاب شدید،
-                <br />
-                قدم بعد را هم می‌شناسیم.
+                {" "}
+                {content.text48} <br /> {content.text49}{" "}
               </h2>
-              <p>
-                پس از انتخاب شدن در لاتاری، مسیر تازه‌ای از بررسی و تکمیل پرونده
-                آغاز می‌شود. امکان همراهی متخصص برای این مرحله هم وجود دارد.
-              </p>
-              <p className="support-fineprint">
-                این خدمت با بررسی شرایط، دامنه و هزینه جداگانه ارائه می‌شود.
-                انتخاب شدن یا همراهی متخصص، تضمین صدور ویزا نیست.
-              </p>
+              <p> {content.text50} </p>
+              <p className="support-fineprint"> {content.text51} </p>
               <a href="#registration" className="inline-link light-link">
-                با هم مسیر را شروع کنیم <ArrowUpLeft size={18} />
+                {" "}
+                {content.text52} <ArrowUpLeft size={18} />
               </a>
             </div>
           </div>
@@ -367,35 +339,40 @@ export default async function Home() {
         >
           <div data-reveal>
             <span className="eyebrow">
-              <span className="section-number">۰۵</span> قبل از اولین قدم
+              <span className="section-number">۰۵</span> {content.text53}{" "}
             </span>
             <h2 id="faq-title">
-              شاید سؤال شما
-              <br />
-              هم همین باشد.
+              {" "}
+              {content.text54} <br /> {content.text55}{" "}
             </h2>
-            <p>پاسخ‌های روشن، برای تصمیمی آگاهانه‌تر.</p>
+            <p>{content.text56}</p>
             <div className="faq-note">
               <MessageCircle size={23} strokeWidth={1.5} />
               <span>
-                همراهی واقعی،
-                <br />
-                <strong>از شنیدن سؤال‌های شما شروع می‌شود.</strong>
+                {" "}
+                {content.text57} <br />
+                <strong>{content.text58}</strong>
               </span>
             </div>
           </div>
-          <Faq />
+          <Faq
+            questions={Array.from({ length: 6 }, (_, i) => [
+              content[`faqQuestion${i + 1}`],
+              content[`faqAnswer${i + 1}`],
+            ])}
+          />
         </section>
 
         <section className="final-cta shell" aria-label="شروع درخواست">
           <div>
-            <span className="eyebrow">یک تصمیم کوچک، یک فصل تازه</span>
-            <h2>قدم اول، از همین‌جا.</h2>
-            <p>مسیر را بشناسید، شیوه همراهی را انتخاب کنید.</p>
+            <span className="eyebrow">{content.text59}</span>
+            <h2>{content.text60}</h2>
+            <p>{content.text61}</p>
           </div>
           <Button asChild size="lg" className="button-warm">
             <a href="#services">
-              انتخاب شیوه همراهی <ArrowUpLeft />
+              {" "}
+              {content.text62} <ArrowUpLeft />
             </a>
           </Button>
         </section>
@@ -408,24 +385,25 @@ export default async function Home() {
             </a>
             <p>{brand.description}</p>
             <a href="#home" className="back-top">
-              بازگشت به بالا <ArrowUpLeft size={17} />
+              {" "}
+              {content.text63} <ArrowUpLeft size={17} />
             </a>
           </div>
           <div className="footer-notice">
             <ShieldCheck size={19} />
             <p>
-              {brand.name} ارائه‌دهنده مستقل خدمات است و وابستگی به دولت آمریکا
-              ندارد. تعرفه‌های نمایش‌داده‌شده مربوط به خدمات شرکت است؛ هزینه
-              احتمالی رسمی و خدمات بعدی، در صورت لزوم جداگانه اعلام می‌شوند.
+              {brand.name} {content.text64}{" "}
             </p>
           </div>
           <div className="footer-bottom">
             <span>© {brand.legalName}</span>
             <div>
-              <a href="/privacy">حریم خصوصی</a>
-              <a href="/terms">شرایط خدمات</a>
+              <a href="/privacy">{content.text65}</a>
+              <a href="/terms">{content.text66}</a>
               <a href={officialDvUrl} target="_blank" rel="noreferrer">
-                منبع رسمی DV <span className="sr-only">، در صفحه جدید</span>
+                {" "}
+                {content.text67}{" "}
+                <span className="sr-only">{content.text68}</span>
               </a>
             </div>
             <span>{brand.location}</span>
