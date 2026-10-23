@@ -23,15 +23,18 @@ export async function POST(request: Request) {
   try {
     const client = await createBackofficeClient();
     if (input.action === "register") {
-      const { error } = await client.auth.signUp({
+      const { error, data } = await client.auth.signUp({
         email: input.email.trim(),
         password: input.password,
         options: {
-          emailRedirectTo: new URL("/portal", request.headers.get("origin")!)
-            .href,
+          emailRedirectTo: new URL(
+            "/auth/callback",
+            process.env.SITE_URL || request.headers.get("origin")!,
+          ).href,
         },
       });
-      await client.auth.signOut({ scope: "local" });
+      // Preserve the PKCE verifier until the confirmation link returns.
+      if (data.session) await client.auth.signOut({ scope: "local" });
       return error
         ? backofficeJson(
             {

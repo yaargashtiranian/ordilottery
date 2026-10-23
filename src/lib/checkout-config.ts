@@ -5,7 +5,7 @@ export type CheckoutConfig = {
   allowedOrigins: string[];
 };
 
-/** No direct payment provider is implemented yet; legacy env values cannot enable collection. */
+/** Retired bridge configuration stays disabled; the new journey uses growth/server commerce modes. */
 export function getCheckoutConfig(): CheckoutConfig | null {
   return null;
 }

@@ -1,0 +1,667 @@
+/* The conversion island shares brand tokens; no animation or download gates the first interaction. */
+.hero:has(.journey-widget) {
+  align-items: start;
+  gap: 56px;
+  padding-block: 56px 36px;
+}
+.hero:has(.journey-widget) .hero-copy {
+  padding-top: 28px;
+}
+.hero:has(.journey-widget) h1 {
+  font-size: clamp(30px, 3.3vw, 48px);
+  line-height: 1.65;
+}
+.hero:has(.journey-widget) .hero-description {
+  max-width: 420px;
+  font-size: 16px;
+}
+.journey-widget {
+  background: #fff;
+  border: 1px solid #d9e2d5;
+  border-radius: 24px;
+  padding: 24px;
+  min-width: 0;
+  box-shadow: 0 20px 60px #203e350b;
+  scroll-margin-top: 110px;
+}
+.journey-guide {
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+}
+.guide-small {
+  width: 54px;
+  height: 54px;
+}
+.guide-intro {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.guide-intro p {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+.journey-progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  list-style: none;
+  padding: 18px 0;
+  margin: 0;
+}
+.journey-progress li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #617365;
+}
+.journey-progress li span {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: #edf0e7;
+}
+.journey-progress li[aria-current] {
+  color: #244e40;
+  font-weight: 700;
+}
+.journey-progress li[aria-current] span,
+.journey-progress li[data-done="true"] span {
+  color: #fff;
+  background: #244e40;
+}
+.journey-question {
+  font-size: 20px;
+  line-height: 1.7;
+  letter-spacing: 0;
+  outline: none;
+}
+.journey-hint {
+  font-size: 12px;
+  margin-block: 7px 16px;
+}
+.journey-options {
+  display: grid;
+  gap: 10px;
+  margin-block: 14px;
+  border: 0;
+  padding: 0;
+}
+.journey-choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dfe5d9;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.journey-choice[data-selected="true"] {
+  border-color: #42694f;
+  background: #f1f5ec;
+  box-shadow: inset 0 0 0 1px #42694f;
+}
+.journey-choice input,
+.journey-consent input {
+  width: 17px;
+  height: 17px;
+  accent-color: #244e40;
+  flex-shrink: 0;
+}
+.journey-choice > span {
+  display: grid;
+  gap: 2px;
+}
+.journey-choice strong {
+  font-size: 14px;
+}
+.journey-choice small {
+  font-size: 11px;
+  color: #596b5d;
+  font-weight: 400;
+}
+.journey-choice b {
+  font-size: 15px;
+  font-weight: 600;
+}
+.journey-details {
+  margin-block: 12px;
+  font-size: 12px;
+}
+.journey-details summary {
+  padding-block: 7px;
+  color: #365f49;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.journey-details ul {
+  padding-inline-start: 20px;
+  margin-block: 8px;
+}
+.journey-details p {
+  font-size: 11px;
+}
+.journey-widget .form-fields {
+  margin-block: 16px;
+  gap: 14px;
+}
+.journey-widget .field-group {
+  min-width: 0;
+}
+.journey-widget input {
+  min-width: 0;
+}
+.journey-review {
+  display: grid;
+  gap: 3px;
+  border-radius: 12px;
+  background: #f3f5ee;
+  padding: 14px;
+  margin-block: 16px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.journey-review bdi {
+  text-align: start;
+  font-size: 12px;
+}
+.journey-review button {
+  width: fit-content;
+  color: #315d47;
+  font-size: 12px;
+  text-decoration: underline;
+  padding-block: 8px;
+}
+.coupon-row {
+  display: flex;
+  gap: 8px;
+  margin-block: 10px;
+}
+.journey-totals {
+  margin: 16px 0;
+  font-size: 13px;
+}
+.journey-totals > div {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding-block: 5px;
+}
+.journey-totals dd {
+  margin: 0;
+}
+.journey-totals .total {
+  border-top: 1px dashed #cbd5c5;
+  margin-top: 8px;
+  padding-top: 12px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.journey-consent {
+  display: flex;
+  gap: 9px;
+  align-items: start;
+  font-size: 11px;
+  line-height: 2;
+}
+.journey-consent input {
+  margin-top: 4px;
+}
+.journey-consent a {
+  text-decoration: underline;
+}
+.journey-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.journey-next {
+  flex: 1;
+  min-height: 46px;
+  font-size: 13px;
+}
+.journey-footnote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  margin-top: 12px;
+}
+.journey-message {
+  font-size: 12px;
+  line-height: 2;
+  color: #8d3e28;
+  padding-top: 8px;
+}
+.journey-message:empty {
+  display: none;
+}
+.checkout-page {
+  max-width: 680px;
+  padding-block: 30px 90px;
+}
+.checkout-card {
+  margin-top: 20px;
+  padding: 32px;
+  border-radius: 24px;
+  background: white;
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+}
+.checkout-card > .eyebrow {
+  margin-top: 4px;
+}
+.checkout-card h1 {
+  font-size: 27px;
+}
+.checkout-card .journey-guide {
+  justify-self: center;
+}
+.simulation-banner {
+  background: #fff3dc;
+  color: #755019;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+.checkout-success,
+.checkout-buttons {
+  display: grid;
+  gap: 16px;
+}
+.order-reference {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+/* Non-modal chat preserves reading position. It claims neither staff presence nor instant response. */
+.chat-widget {
+  position: fixed;
+  z-index: 70;
+  inset-inline-start: 22px;
+  bottom: max(22px, env(safe-area-inset-bottom));
+}
+.chat-trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 10px 17px;
+  color: #fff;
+  background: #244e40;
+  border: 1px solid #fff;
+  border-radius: 30px;
+  box-shadow: 0 8px 30px #203e3526;
+  font-size: 13px;
+}
+.chat-panel {
+  width: 370px;
+  max-width: calc(100vw - 28px);
+  max-height: min(700px, calc(100dvh - 100px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #ccd6c9;
+  box-shadow: 0 20px 70px #203e352e;
+  overflow: auto;
+}
+.chat-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  background: #f1f5ec;
+  border-bottom: 1px solid #dfe5d9;
+}
+.chat-heading h2 {
+  font-size: 15px;
+  letter-spacing: 0;
+}
+.chat-heading small {
+  font-size: 10px;
+  color: #596b5d;
+}
+.chat-heading > button {
+  margin-inline-start: auto;
+}
+.chat-assistant {
+  padding: 17px;
+  overflow: auto;
+}
+.chat-topics {
+  display: grid;
+  gap: 7px;
+  margin-block: 12px;
+}
+.chat-topics button {
+  text-align: start;
+  border: 1px solid #dfe5d9;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 12px;
+}
+.chat-topics button:hover {
+  background: #f1f5ec;
+}
+.chat-answer {
+  background: #f1f5ec;
+  border-radius: 12px;
+  padding: 13px;
+  margin-bottom: 14px;
+  font-size: 12px;
+}
+.chat-disclosure {
+  font-size: 10px;
+  line-height: 1.9;
+  padding: 10px 15px;
+}
+.chat-disclosure a {
+  text-decoration: underline;
+}
+.chat-back {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 10px 15px;
+}
+.chat-log {
+  height: 260px;
+  overflow: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-log > p {
+  font-size: 12px;
+}
+.chat-bubble {
+  border-radius: 12px;
+  background: #edf3e7;
+  max-width: 90%;
+  padding: 9px 12px;
+  align-self: start;
+  width: fit-content;
+  overflow-wrap: anywhere;
+}
+.chat-bubble.staff {
+  background: #f4eee5;
+  align-self: end;
+}
+.chat-bubble small {
+  font-size: 10px;
+  color: #596b5d;
+}
+.chat-bubble p {
+  font-size: 12px;
+  white-space: pre-wrap;
+  line-height: 1.9;
+  color: #203e35;
+}
+.chat-compose {
+  display: flex;
+  gap: 8px;
+  padding: 6px 12px;
+  align-items: end;
+}
+.chat-compose textarea {
+  min-height: 65px;
+  resize: none;
+  font-size: 13px;
+}
+.chat-compose button {
+  flex-shrink: 0;
+}
+.chat-connection {
+  font-size: 10px;
+  padding-inline: 14px;
+}
+.chat-error {
+  color: #a7372c;
+  font-size: 12px;
+  padding-inline: 14px;
+}
+/* Backoffice growth screens reuse the existing shell and keep long identifiers from overflowing RTL cards. */
+.growth-workspace {
+  padding: 32px;
+  max-width: 1400px;
+  margin-inline: auto;
+}
+.growth-workspace header {
+  margin-bottom: 24px;
+}
+.growth-workspace h1 {
+  font-size: 26px;
+}
+.growth-workspace h2 {
+  font-size: 17px;
+  letter-spacing: 0;
+}
+.growth-create {
+  background: white;
+  border: 1px solid var(--border);
+  padding: 20px;
+  border-radius: 16px;
+  margin-block: 20px;
+}
+.growth-create summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.growth-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+.growth-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+.growth-form input,
+.growth-form select {
+  min-width: 0;
+  width: 100%;
+}
+.growth-form select {
+  border: 1px solid var(--border);
+  padding: 10px;
+  border-radius: 8px;
+  background: white;
+}
+.growth-form p {
+  font-size: 12px;
+}
+.growth-records {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.growth-record {
+  background: white;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  overflow-wrap: anywhere;
+}
+.growth-record p {
+  font-size: 12px;
+}
+.growth-record small {
+  font-size: 10px;
+}
+.growth-tag {
+  display: inline-flex;
+  padding: 2px 9px;
+  background: #eef2e8;
+  border-radius: 20px;
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+.growth-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  font-size: 12px;
+}
+.growth-chat-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(300px, 2fr);
+  gap: 22px;
+}
+.growth-conversation {
+  display: grid;
+  text-align: start;
+  gap: 6px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px;
+  font-size: 12px;
+}
+.growth-conversation[aria-pressed="true"] {
+  border-color: #244e40;
+  box-shadow: inset 0 0 0 1px #244e40;
+}
+.staff-chat {
+  background: white;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  min-width: 0;
+}
+.staff-chat-log {
+  height: 380px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-block: 15px;
+}
+.staff-chat > p {
+  font-size: 11px;
+}
+@media (max-width: 1000px) {
+  .hero:has(.journey-widget) {
+    gap: 25px;
+  }
+  .journey-widget {
+    padding: 18px;
+  }
+  .journey-progress li {
+    font-size: 10px;
+  }
+  .journey-choice {
+    gap: 8px;
+    padding: 12px;
+  }
+  .growth-chat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .hero:has(.journey-widget) {
+    padding-top: 24px;
+    gap: 24px;
+  }
+  .hero:has(.journey-widget) .hero-copy {
+    padding: 0;
+  }
+  .hero:has(.journey-widget) h1 {
+    font-size: 30px;
+  }
+  .hero:has(.journey-widget) .hero-description {
+    font-size: 14px;
+    margin-block: 14px;
+  }
+  .hero:has(.journey-widget) .hero-reassurance {
+    margin-top: 14px;
+  }
+  .journey-widget {
+    width: 100%;
+    padding: 17px;
+    border-radius: 18px;
+  }
+  .journey-choice > svg {
+    display: none;
+  }
+  .journey-question {
+    font-size: 18px;
+  }
+  .journey-progress {
+    gap: 4px;
+  }
+  .journey-progress li {
+    font-size: 9px;
+  }
+  .journey-progress li span {
+    width: 20px;
+    height: 20px;
+  }
+  .chat-widget {
+    inset-inline-start: 14px;
+    bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  .chat-trigger span {
+    display: none;
+  }
+  .chat-trigger {
+    width: 48px;
+    padding: 12px;
+  }
+  .chat-panel {
+    width: calc(100vw - 28px);
+  }
+  .growth-workspace {
+    padding: 18px;
+  }
+  .growth-form {
+    grid-template-columns: 1fr;
+  }
+  .growth-record {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .checkout-card {
+    padding: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-choice {
+    transition: none;
+  }
+}
+
+/* Existing backoffice paragraph colors were below AA contrast on pale surfaces. */
+.backoffice .growth-workspace p {
+  color: #536459;
+}
+.backoffice .growth-workspace .bo-error-banner {
+  color: #a33128;
+}
+.journey-resume {
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  text-decoration: underline;
+  margin-top: 10px;
+}

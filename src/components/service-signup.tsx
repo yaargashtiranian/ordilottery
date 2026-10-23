@@ -1,290 +1,317 @@
 "use client";
-
-import { useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
-  ArrowUpLeft,
+  ArrowLeft,
   Check,
   Monitor,
   MapPin,
   ShieldCheck,
-  MessageCircle,
-  LoaderCircle,
-  LockKeyhole,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Guide } from "@/components/growth/guide";
 import { plans, persianNumber, type PlanId } from "@/lib/site";
 import {
   validateRegistration,
   type Applicant,
   type FieldErrors,
 } from "@/lib/registration";
+import { couponCode, type CommerceMode, type Quote } from "@/lib/growth/model";
+import { experience, followCheckout, journeyEvent } from "@/lib/growth/client";
 
-/** Only contact details precede payment; identity documents belong to a later flow. */
 const fields = [
   {
     name: "firstName",
     label: "نام",
-    placeholder: "نام شما",
     autoComplete: "given-name",
     type: "text",
+    placeholder: "نام شما",
   },
   {
     name: "lastName",
     label: "نام خانوادگی",
-    placeholder: "نام خانوادگی شما",
     autoComplete: "family-name",
     type: "text",
+    placeholder: "نام خانوادگی شما",
   },
   {
     name: "email",
     label: "ایمیل",
-    placeholder: "you@example.com",
     autoComplete: "email",
     type: "email",
+    placeholder: "you@example.com",
   },
   {
     name: "phone",
     label: "شماره تماس",
-    placeholder: "۰۹۱۲۳۴۵۶۷۸۹",
     autoComplete: "tel",
     type: "tel",
+    placeholder: "۰۹۱۲۳۴۵۶۷۸۹",
   },
 ] as const;
+const labels = ["انتخاب همراهی", "آشنایی کوتاه", "مرور و تصمیم"];
 
-/** Plan selection and four contact fields are the only client-side application state. */
-export function ServiceSignup({
-  checkoutEnabled,
-}: {
-  checkoutEnabled: boolean;
-}) {
+/** Three reversible steps keep the four-field contract; nothing is submitted until explicit confirmation. */
+export function ServiceSignup({ mode }: { mode: CommerceMode }) {
+  const [step, setStep] = useState(0);
+  const [resume, setResume] = useState("");
+  useEffect(() => {
+    if (mode === "disabled") return;
+    const controller = new AbortController();
+    fetch("/api/experience?resume=1", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = await response.json();
+        if (typeof data.order?.id === "string") setResume(data.order.id);
+      })
+      .catch(() => {
+        /* Recovery is optional; the primary journey remains available. */
+      });
+    return () => controller.abort();
+  }, [mode]);
   const [plan, setPlan] = useState<PlanId>("online");
+  const [applicant, setApplicant] = useState<Applicant>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+  });
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [result, setResult] = useState<{
-    message: string;
-    error: boolean;
-  } | null>(null);
-  const [pending, setPending] = useState(false);
-  const form = useRef<HTMLFormElement>(null);
-  const idempotencyKey = useRef<string | null>(null);
-  const submitting = useRef(false);
-
-  /** Changing actual order input starts a new attempt; retries preserve the same key. */
-  function resetAttempt() {
-    idempotencyKey.current = null;
-    setErrors({});
-    setResult(null);
+  const [code, setCode] = useState("");
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [consent, setConsent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const attempt = useRef("");
+  const lock = useRef(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (mounted.current) heading.current?.focus({ preventScroll: true });
+    mounted.current = true;
+  }, [step]);
+  const total = quote?.total_amount ?? plans[plan].price;
+  function move(next: number) {
+    setMessage("");
+    setStep(next);
+    journeyEvent((["plan", "contact", "review"] as const)[next]);
   }
-
-  /** Validate locally; direct checkout stays disabled until its server integration is verified. */
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  function changed() {
+    attempt.current = "";
+    setMessage("");
+  }
+  async function applyCoupon() {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setMessage("");
+    try {
+      const normalized = couponCode(code);
+      if (mode === "disabled")
+        throw new Error(
+          "بررسی کد پس از اتصال سرویس فعال می‌شود؛ اطلاعاتی ذخیره نشده است.",
+        );
+      const data = await experience({
+        action: "quote",
+        plan,
+        code: normalized,
+      });
+      setQuote(data.quote);
+      setCode(normalized);
+      attempt.current = "";
+      setMessage(
+        normalized
+          ? "تخفیف اعمال شد؛ ظرفیت هنگام تأیید سفارش نهایی می‌شود."
+          : "کد تخفیف حذف شد.",
+      );
+    } catch (error) {
+      setQuote(null);
+      setMessage(
+        error instanceof Error ? error.message : "بررسی کد انجام نشد.",
+      );
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting.current) return;
-    const data = new FormData(event.currentTarget);
-    idempotencyKey.current ??= crypto.randomUUID();
+    if (lock.current) return;
+    if (step === 0) {
+      move(1);
+      return;
+    }
+    const id = attempt.current || crypto.randomUUID();
     const validation = validateRegistration({
-      ...Object.fromEntries(data),
+      ...applicant,
       plan,
-      idempotencyKey: idempotencyKey.current,
+      idempotencyKey: id,
     });
-    setResult(null);
     if (!validation.valid) {
       setErrors(validation.fields);
-      const invalid = Object.keys(validation.fields)[0];
-      if (invalid)
-        form.current
-          ?.querySelector<HTMLInputElement>(`[name="${invalid}"]`)
-          ?.focus();
-      else setResult({ message: validation.message, error: true });
+      const field = Object.keys(validation.fields)[0];
+      document.getElementById(field)?.focus();
       return;
     }
     setErrors({});
-    if (!checkoutEnabled) {
-      setResult({
-        message:
-          "اطلاعات از نظر ساختار معتبر است. دریافت درخواست هنوز فعال نشده؛ اطلاعات شما ارسال یا ذخیره نشده و پرداختی انجام نمی‌شود.",
-        error: false,
-      });
+    if (step === 1) {
+      move(2);
       return;
     }
-    submitting.current = true;
-    setPending(true);
+    if (!consent) {
+      setMessage("برای ادامه، شرایط خدمات و حریم خصوصی را تأیید کنید.");
+      return;
+    }
+    if (mode === "disabled") {
+      setMessage(
+        "مسیر را کامل کردید. ثبت سفارش هنوز فعال نیست؛ اطلاعات شما ارسال یا ذخیره نشده و پرداختی انجام نمی‌شود.",
+      );
+      return;
+    }
+    if (code.trim() && !quote) {
+      setMessage("ابتدا کد تخفیف را بررسی کنید یا آن را پاک کنید.");
+      return;
+    }
+    lock.current = true;
+    setBusy(true);
+    setMessage("");
+    attempt.current = id;
     try {
-      const response = await fetch("/api/registration", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validation.data),
-        signal: AbortSignal.timeout(15_000),
+      const data = await experience({
+        action: "order",
+        ...validation.data,
+        code,
+        consent,
+        expectedTotal: total,
       });
-      const body = await response.json();
-      if (!response.ok) {
-        setErrors(body.fields ?? {});
-        setResult({
-          message:
-            typeof body.message === "string"
-              ? body.message
-              : "ثبت درخواست انجام نشد. دوباره تلاش کنید.",
-          error: true,
-        });
-        return;
+      setResume(data.order.id);
+      journeyEvent("complete");
+      // A payable bank order goes straight to the provider; the saved order remains recoverable on failure.
+      if (data.order.total_amount > 0 && mode !== "simulation") {
+        const payment = await experience({ action: "pay", id: data.order.id });
+        followCheckout(payment.next);
+      } else {
+        followCheckout(data.next);
       }
-      // The server has already restricted this URL to configured checkout origins.
-      if (
-        typeof body.checkoutUrl !== "string" ||
-        !body.checkoutUrl.startsWith("https://")
-      )
-        throw new Error("Missing checkout URL");
-      window.location.assign(body.checkoutUrl);
-    } catch {
-      setResult({
-        message:
-          "ارتباط کامل نشد. لطفاً با همین فرم دوباره تلاش کنید؛ این پیام تأیید ثبت درخواست نیست.",
-        error: true,
-      });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "ارتباط برقرار نشد.");
     } finally {
-      submitting.current = false;
-      setPending(false);
+      lock.current = false;
+      setBusy(false);
     }
   }
-
   return (
-    <section
-      id="services"
-      className="services-section section"
-      aria-labelledby="services-title"
-    >
-      <div className="shell">
-        <div className="center-heading" data-reveal>
-          <span className="eyebrow">
-            <span className="section-number">۰۴</span> دو شیوه، یک همراهی
-          </span>
-          <h2 id="services-title">روشی که با زندگی شما جور است.</h2>
+    <section id="services" className="journey-widget" aria-label="شروع تعاملی">
+      <div id="registration" className="journey-anchor" />
+      <div className="guide-intro">
+        <Guide small />
+        <div>
+          <span className="eyebrow">راهنمای قدم اول</span>
           <p>
-            آنلاین یا حضوری؛ در هر دو مسیر، بررسی دقیق و همراهی متخصص را دارید.
+            {step === 0
+              ? "سلام! دوست داری چطور همراهت باشیم؟"
+              : step === 1
+                ? "خوش اومدی! فعلاً همین چهار مورد کافیه."
+                : "عالیه! قبل از تصمیم، همه‌چیز رو مرور کن."}
           </p>
         </div>
-        <div className="pricing-grid">
-          {(Object.entries(plans) as [PlanId, (typeof plans)[PlanId]][]).map(
-            ([id, item]) => (
-              <article
-                className={`plan-card ${id === "online" ? "featured" : ""}`}
-                key={id}
-                data-reveal
-              >
-                <div className="plan-top">
-                  <span className="plan-icon">
-                    {id === "online" ? (
-                      <Monitor size={23} strokeWidth={1.4} />
-                    ) : (
-                      <MapPin size={23} strokeWidth={1.4} />
-                    )}
-                  </span>
-                  <span className="plan-badge">تعرفه پیش‌ثبت‌نام</span>
-                </div>
-                <h3>{item.name}</h3>
-                <p className="plan-description">{item.description}</p>
-                <div className="regular-price">
-                  <span>تعرفه عادی برنامه‌ریزی‌شده:</span>
-                  <span>{persianNumber(item.regularPrice)} تومان</span>
-                </div>
-                <div className="price">
-                  <strong>{persianNumber(item.price)}</strong>
-                  <small>تومان / هر نفر</small>
-                </div>
-                <p className="offer-label">تعرفه پیشنهادی پیش‌ثبت‌نام خدمات</p>
-                <ul className="plan-features">
-                  {item.features.map((feature) => (
-                    <li key={feature}>
-                      <Check aria-hidden="true" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="plan-button"
-                  variant={id === "online" ? "default" : "outline"}
-                  asChild
-                >
-                  <a
-                    href="#registration"
-                    onClick={() => {
-                      setPlan(id);
-                      resetAttempt();
-                    }}
-                  >
-                    انتخاب {item.name} <ArrowUpLeft aria-hidden="true" />
-                  </a>
-                </Button>
-              </article>
-            ),
-          )}
-        </div>
-        <p className="pricing-note">
-          مبالغ مربوط به خدمات شرکت هستند. هزینه احتمالی رسمی و خدمات پس از
-          انتخاب شدن جداست. عکاسی با توافق جداگانه هماهنگ می‌شود. شرایط نهایی
-          پیش از فعال‌شدن پرداخت اعلام خواهد شد.
-        </p>
-
-        {/* The preview explicitly avoids collecting data while integrations are unavailable. */}
-        <div id="registration" className="registration">
-          <div className="registration-intro" data-reveal>
-            <span className="eyebrow">اولین قدم شما</span>
-            <h2>بیایید آشنا شویم.</h2>
-            <p>
-              برای شروع، همین چهار مورد کافی است. اطلاعات تکمیلی را بعد از
-              پرداخت تأییدشده و با راهنمایی تیم دریافت می‌کنیم.
-            </p>
-            <div className="registration-points">
-              <span>
-                <ShieldCheck /> اطلاعات اولیه محدود
-              </span>
-              <span>
-                <MessageCircle /> پیگیری تلفنی و پیام‌رسان
-              </span>
-              <span>
-                <LockKeyhole /> مدارک هویتی در مرحله بعد
-              </span>
-            </div>
-          </div>
-          <form
-            ref={form}
-            className="form-panel"
-            onSubmit={submit}
-            onChange={resetAttempt}
-            noValidate
-            aria-labelledby="form-title"
-            aria-busy={pending}
+      </div>
+      <ol className="journey-progress" aria-label="مراحل درخواست">
+        {labels.map((label, index) => (
+          <li
+            key={label}
+            aria-current={step === index ? "step" : undefined}
+            data-done={step > index}
           >
-            <div className="form-heading">
-              <h3 id="form-title">اطلاعات اولیه شما</h3>
-              <span>
-                <span className="form-step">۱</span> آشنایی و شروع
-              </span>
-            </div>
-            {!checkoutEnabled && (
-              <p className="form-preview-note">
-                این فرم فعلاً برای بررسی مسیر است؛ ثبت درخواست و پرداخت فعال
-                نیست و اطلاعات شما ارسال یا ذخیره نمی‌شود.
-              </p>
-            )}
-            <fieldset className="plan-selector" disabled={pending}>
-              <legend>شیوه همراهی شما</legend>
+            <span>
+              {step > index ? <Check size={14} /> : persianNumber(index + 1)}
+            </span>
+            {label}
+          </li>
+        ))}
+      </ol>
+      <form noValidate onSubmit={submit} aria-busy={busy}>
+        <h2 ref={heading} tabIndex={-1} className="journey-question">
+          {
+            [
+              "روش همراهی‌ات را انتخاب کن",
+              "چطور با تو در ارتباط باشیم؟",
+              "همه‌چیز روشن؛ انتخاب با تو",
+            ][step]
+          }
+        </h2>
+        {step === 0 && (
+          <>
+            <p className="journey-hint">
+              اول مسیر را بشناس؛ پرداخت فقط بعد از مرور سفارش.
+            </p>
+            <fieldset className="journey-options" disabled={busy}>
+              <legend className="sr-only">شیوه همراهی شما</legend>
               {(
                 Object.entries(plans) as [PlanId, (typeof plans)[PlanId]][]
               ).map(([id, item]) => (
-                <label key={id}>
+                <label
+                  key={id}
+                  className="journey-choice"
+                  data-selected={plan === id}
+                >
                   <input
                     type="radio"
-                    name="selectedPlan"
+                    name="plan"
                     value={id}
                     checked={plan === id}
-                    onChange={() => setPlan(id)}
+                    onChange={() => {
+                      setPlan(id);
+                      setQuote(null);
+                      changed();
+                    }}
                   />
-                  {item.name}
+                  {id === "online" ? (
+                    <Monitor size={22} />
+                  ) : (
+                    <MapPin size={22} />
+                  )}
+                  <span>
+                    <strong>{item.name}</strong>
+                    <small>
+                      {id === "online"
+                        ? "پیگیری تلفنی و پیام‌رسان، از هر جا"
+                        : "کمک متخصص برای بررسی و اسکن مدارک"}
+                    </small>
+                    <b>
+                      {persianNumber(item.price)} <small>تومان / نفر</small>
+                    </b>
+                  </span>
                 </label>
               ))}
             </fieldset>
+            <details className="journey-details">
+              <summary>این خدمت چه چیزهایی دارد؟</summary>
+              <ul>
+                {plans[plan].features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+              <p>
+                تعرفه عادی برنامه‌ریزی‌شده:{" "}
+                {persianNumber(plans[plan].regularPrice)} تومان. هزینه احتمالی
+                رسمی و خدمات پس از انتخاب جداست.
+              </p>
+            </details>
+          </>
+        )}
+        {step === 1 && (
+          <>
+            <p className="journey-hint">
+              از همان ایمیلی استفاده کن که برای ورود به پرونده خواهی داشت. مدارک
+              هویتی برای مرحله بعد است.
+            </p>
             <div className="form-fields">
               {fields.map((field) => (
                 <div className="field-group" key={field.name}>
@@ -293,13 +320,11 @@ export function ServiceSignup({
                     <span className="sr-only"> (الزامی)</span>
                   </Label>
                   <Input
+                    {...field}
                     id={field.name}
-                    name={field.name}
-                    type={field.type}
-                    autoComplete={field.autoComplete}
-                    placeholder={field.placeholder}
+                    value={applicant[field.name]}
                     required
-                    disabled={pending}
+                    disabled={busy}
                     maxLength={
                       field.name === "email"
                         ? 254
@@ -307,24 +332,18 @@ export function ServiceSignup({
                           ? 25
                           : 80
                     }
-                    dir={
-                      field.type === "email" || field.type === "tel"
-                        ? "ltr"
-                        : undefined
-                    }
-                    inputMode={
-                      field.type === "tel"
-                        ? "tel"
-                        : field.type === "email"
-                          ? "email"
-                          : "text"
-                    }
-                    aria-invalid={Boolean(
-                      errors[field.name as keyof Applicant],
-                    )}
+                    dir={field.type === "text" ? undefined : "ltr"}
+                    aria-invalid={Boolean(errors[field.name])}
                     aria-describedby={
                       errors[field.name] ? `${field.name}-error` : undefined
                     }
+                    onChange={(event) => {
+                      setApplicant({
+                        ...applicant,
+                        [field.name]: event.target.value,
+                      });
+                      changed();
+                    }}
                   />
                   {errors[field.name] && (
                     <span id={`${field.name}-error`} className="field-error">
@@ -334,42 +353,140 @@ export function ServiceSignup({
                 </div>
               ))}
             </div>
-            <div className="form-total">
-              <span>تعرفه خدمت انتخاب‌شده</span>
-              <strong>
-                {persianNumber(plans[plan].price)} <small>تومان</small>
-              </strong>
+          </>
+        )}
+        {step === 2 && (
+          <>
+            <div className="journey-review">
+              <strong>{plans[plan].name}</strong>
+              <span>
+                {applicant.firstName} {applicant.lastName}
+              </span>
+              <bdi>{applicant.email}</bdi>
+              <bdi>{applicant.phone}</bdi>
+              <button type="button" onClick={() => move(1)}>
+                ویرایش اطلاعات
+              </button>
             </div>
-            <Button type="submit" className="submit-button" disabled={pending}>
-              {pending ? (
-                <>
-                  <LoaderCircle className="animate-spin" aria-hidden="true" />{" "}
-                  در حال ارتباط…
-                </>
-              ) : (
-                <>
-                  {checkoutEnabled
-                    ? "ادامه و پرداخت هزینه خدمات"
-                    : "بررسی اطلاعات فرم"}
-                  <ArrowUpLeft aria-hidden="true" />
-                </>
+            <details className="journey-details">
+              <summary>کد تخفیف داری؟</summary>
+              <div className="coupon-row">
+                <Label className="sr-only" htmlFor="coupon">
+                  کد تخفیف
+                </Label>
+                <Input
+                  id="coupon"
+                  dir="ltr"
+                  maxLength={32}
+                  value={code}
+                  disabled={busy}
+                  placeholder="CAMPAIGN"
+                  onChange={(event) => {
+                    setCode(event.target.value);
+                    setQuote(null);
+                    changed();
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={applyCoupon}
+                >
+                  بررسی کد
+                </Button>
+              </div>
+            </details>
+            <dl className="journey-totals">
+              <div>
+                <dt>هزینه خدمات</dt>
+                <dd>{persianNumber(plans[plan].price)} تومان</dd>
+              </div>
+              {quote && quote.discount_amount > 0 && (
+                <div>
+                  <dt>تخفیف کمپین</dt>
+                  <dd>−{persianNumber(quote.discount_amount)} تومان</dd>
+                </div>
               )}
-            </Button>
-            <p className="form-policy">
-              قبل از ادامه، <a href="/terms">شرایط خدمات</a> و{" "}
-              <a href="/privacy">حریم خصوصی</a> را بخوانید. درخواست خدمات، به
-              معنی ثبت در سامانه رسمی DV نیست.
-            </p>
-            <div aria-live="polite" aria-atomic="true">
-              {result && (
-                <p className="form-result" data-error={result.error}>
-                  {result.message}
-                </p>
-              )}
-            </div>
-          </form>
+              <div className="total">
+                <dt>مبلغ نهایی</dt>
+                <dd>
+                  {total === 0
+                    ? "بدون نیاز به پرداخت"
+                    : `${persianNumber(total)} تومان`}
+                </dd>
+              </div>
+            </dl>
+            <label className="journey-consent">
+              <input
+                type="checkbox"
+                checked={consent}
+                disabled={busy}
+                onChange={(event) => setConsent(event.target.checked)}
+              />
+              <span>
+                <a href="/terms" target="_blank" rel="noreferrer">
+                  شرایط خدمات
+                </a>{" "}
+                و{" "}
+                <a href="/privacy" target="_blank" rel="noreferrer">
+                  حریم خصوصی
+                </a>{" "}
+                را می‌پذیرم. این درخواست، ثبت رسمی DV نیست.
+              </span>
+            </label>
+          </>
+        )}
+        <div role="status" className="journey-message">
+          {message}
         </div>
-      </div>
+        <div className="journey-actions">
+          {step > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => move(step - 1)}
+              aria-label="مرحله قبل"
+            >
+              <ArrowRight />
+            </Button>
+          )}
+          <Button className="journey-next" type="submit" disabled={busy}>
+            {busy
+              ? "در حال بررسی…"
+              : step === 0
+                ? "مسیر من را بساز"
+                : step === 1
+                  ? "دیدن خلاصه و قیمت"
+                  : mode === "disabled"
+                    ? "بررسی مسیر درخواست"
+                    : total === 0
+                      ? "تأیید سفارش بدون پرداخت"
+                      : "تأیید و ادامه به پرداخت"}
+            <ArrowLeft size={18} />
+          </Button>
+        </div>
+        <p className="journey-footnote">
+          <ShieldCheck size={14} />
+          {mode === "disabled"
+            ? "پیش‌نمایش مسیر؛ دریافت سفارش هنوز فعال نیست."
+            : mode !== "live"
+              ? "حالت آزمایشی؛ وجه و پرونده واقعی ایجاد نمی‌شود."
+              : "پرداخت فقط برای خدمات شرکت؛ بدون تضمین انتخاب."}
+        </p>
+      </form>
+      {resume && (
+        <Link className="journey-resume" href={`/checkout/${resume}`}>
+          پیگیری آخرین درخواست این مرورگر ←
+        </Link>
+      )}
+      <noscript>
+        <p>
+          برای استفاده از فرم تعاملی JavaScript را فعال کنید. توضیحات خدمات و
+          شرایط در همین صفحه قابل مطالعه است.
+        </p>
+      </noscript>
     </section>
   );
 }

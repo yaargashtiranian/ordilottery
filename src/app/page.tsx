@@ -18,14 +18,14 @@ import {
 import { Navigation } from "@/components/navigation";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
-import { TravelArt } from "@/components/travel-art";
+import { ChatWidget } from "@/components/growth/chat-widget";
 import { CampaignStatus } from "@/components/campaign-status";
 import { ScrollEffects } from "@/components/scroll-effects";
 import { ServiceSignup } from "@/components/service-signup";
 import { Faq } from "@/components/faq";
 import { brand, officialDvUrl } from "@/lib/site";
 import { getPageContent } from "@/lib/content-store";
-import { getCheckoutConfig } from "@/lib/checkout-config";
+import { commerceMode } from "@/lib/growth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +58,7 @@ export default async function Home() {
       icon: FileCheck2,
     },
   ];
-  const checkoutEnabled = Boolean(getCheckoutConfig());
+  const mode = commerceMode();
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -74,6 +74,7 @@ export default async function Home() {
       </a>
       <Navigation />
       <ScrollEffects />
+      <ChatWidget />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -96,9 +97,9 @@ export default async function Home() {
             <p className="hero-description">{content.description}</p>
             <div className="hero-actions">
               <Button asChild size="lg" className="button-warm">
-                <a href="#services">
+                <a href="#registration">
                   {" "}
-                  {content.text6} <ArrowUpLeft aria-hidden="true" />
+                  مسیر من را بساز <ArrowUpLeft aria-hidden="true" />
                 </a>
               </Button>
               <a href="#story" className="quiet-link">
@@ -116,7 +117,7 @@ export default async function Home() {
               </span>
             </div>
           </div>
-          <TravelArt />
+          <ServiceSignup mode={mode} />
           <div className="hero-status">
             <CampaignStatus />
             <span className="hero-chapter">
@@ -294,8 +295,6 @@ export default async function Home() {
           </div>
         </section>
 
-        <ServiceSignup checkoutEnabled={checkoutEnabled} />
-
         <section
           className="support-section section"
           aria-labelledby="support-title"
@@ -370,7 +369,7 @@ export default async function Home() {
             <p>{content.text61}</p>
           </div>
           <Button asChild size="lg" className="button-warm">
-            <a href="#services">
+            <a href="#registration">
               {" "}
               {content.text62} <ArrowUpLeft />
             </a>

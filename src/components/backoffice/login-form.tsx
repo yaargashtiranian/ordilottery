@@ -10,12 +10,17 @@ import { Label } from "@/components/ui/label";
 /** Passwords are sent once to the same-origin API and never saved in browser storage. */
 export function LoginForm({ portal = false }: { portal?: boolean }) {
   const router = useRouter();
+  const [phase, setPhase] = useState(0);
   const [register, setRegister] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (portal && phase === 0) {
+      setPhase(1);
+      return;
+    }
     setBusy(true);
     setMessage("");
     setFailed(false);
@@ -71,7 +76,7 @@ export function LoginForm({ portal = false }: { portal?: boolean }) {
           />
         </div>
       </div>
-      <div>
+      <div hidden={portal && phase === 0}>
         <Label htmlFor="admin-password">رمز عبور</Label>
         <div className="bo-input-icon">
           <LockKeyhole size={17} />
@@ -81,7 +86,7 @@ export function LoginForm({ portal = false }: { portal?: boolean }) {
             type="password"
             dir="ltr"
             autoComplete={register ? "new-password" : "current-password"}
-            required
+            required={!portal || phase === 1}
             minLength={8}
             maxLength={128}
           />
@@ -96,15 +101,22 @@ export function LoginForm({ portal = false }: { portal?: boolean }) {
       </p>
       <Button size="lg" disabled={busy} className="w-full" type="submit">
         {busy ? <Loader2 className="animate-spin" /> : null}
-        {register
-          ? portal
-            ? "ساخت حساب مشتری"
-            : "ساخت حساب مدیر"
-          : portal
-            ? "ورود به پرونده‌ها"
-            : "ورود به بک‌آفیس"}
+        {portal && phase === 0
+          ? "ادامه با ایمیل من"
+          : register
+            ? portal
+              ? "ساخت حساب مشتری"
+              : "ساخت حساب مدیر"
+            : portal
+              ? "ورود به پرونده‌ها"
+              : "ورود به بک‌آفیس"}
         <ArrowLeft />
       </Button>
+      {portal && phase === 1 && (
+        <Button type="button" variant="ghost" onClick={() => setPhase(0)}>
+          ویرایش ایمیل
+        </Button>
+      )}
       <Button
         type="button"
         variant="ghost"

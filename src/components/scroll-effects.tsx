@@ -55,18 +55,6 @@ export function ScrollEffects() {
                   scrub: 0.6,
                 },
               });
-              gsap.to(".hero-plane", {
-                y: -24,
-                x: -16,
-                rotation: -8,
-                ease: "none",
-                scrollTrigger: {
-                  trigger: ".hero",
-                  start: "top top",
-                  end: "bottom top",
-                  scrub: 1,
-                },
-              });
             },
           );
         })

@@ -23,6 +23,24 @@ import { Button } from "@/components/ui/button";
 
 const navigation = [
   {
+    key: "campaigns",
+    href: "/backoffice/campaigns",
+    label: "کمپین و تخفیف",
+    icon: WalletCards,
+  },
+  {
+    key: "orders",
+    href: "/backoffice/orders",
+    label: "سفارش‌های وب",
+    icon: Files,
+  },
+  {
+    key: "chat",
+    href: "/backoffice/chat",
+    label: "گفت‌وگوی مشتریان",
+    icon: MessagesSquare,
+  },
+  {
     key: "overview",
     href: "/backoffice",
     label: "نمای عملیاتی",
