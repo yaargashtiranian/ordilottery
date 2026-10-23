@@ -124,7 +124,12 @@ export type Summary = {
 export type OperationRecord =
   Customer | CaseRecord | PaymentRecord | TicketRecord;
 export type OperationDetail = {
-  financials: { net_recorded: number; receipt_count: number } | null;
+  financials: {
+    net_recorded: number;
+    receipt_count: number;
+    discount_amount?: number;
+    gateway_amount?: number;
+  } | null;
   record: OperationRecord;
   activity: Activity[];
   cases: CaseRecord[];

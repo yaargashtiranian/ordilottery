@@ -926,7 +926,10 @@ function Detail({
   if (section === "cases") {
     const item = record as CaseRecord;
     const net = data.financials?.net_recorded ?? 0;
-    const balance = item.quoted_amount - net;
+    // Campaign credit is not cash; count verified web receipts independently of manual receipts.
+    const discount = data.financials?.discount_amount ?? 0;
+    const gateway = data.financials?.gateway_amount ?? 0;
+    const balance = item.quoted_amount - discount - gateway - net;
     return (
       <>
         <div className="ops-detail-header">
@@ -1019,6 +1022,10 @@ function Detail({
                   {money(item.quoted_amount)} تومان
                 </Info>
                 <Info label="خالص رسیدهای دستی">{money(net)} تومان</Info>
+                <Info label="تخفیف کمپین">{money(discount)} تومان</Info>
+                <Info label="پرداخت تأییدشده درگاه">
+                  {money(gateway)} تومان
+                </Info>
                 <Info
                   label={
                     balance >= 0
