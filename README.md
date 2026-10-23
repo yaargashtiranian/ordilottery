@@ -34,7 +34,7 @@ their own review state. Overall case review remains a separate expert decision.
 Staff enable customer intake per case. Customers visit `/portal`, create an email/password
 Supabase account with their case email, confirm their email, then sign in. Account
 creation does not grant staff membership or create a CRM record. Configure Supabase
-Auth redirect allowlists for the deployed `/portal` origin. No SMS/OTP provider is added.
+Auth redirect allowlists for the deployed `/auth/callback` URL. No SMS/OTP provider is added.
 
 Configure `DOCUMENTS_ENCRYPTION_KEY` securely on the application server: 64 hex
 characters representing 32 random bytes. Local setup generated this key in ignored
@@ -79,7 +79,7 @@ Run `npm run check:supabase` to verify Data API access to the CMS table, or requ
 The check selects one public page slug without reading drafts or creating records.
 CMS tables and administrator authentication are configured; applicant persistence
 is not part of this content management flow.
-Public checkout and automatic SMS remain disabled pending direct integrations.
+Public checkout defaults to disabled; the interactive journey has explicit simulation, sandbox and live modes described below. Automatic SMS remains disabled.
 
 The client follows the official [initialization guide](https://supabase.com/docs/reference/javascript/initializing)
 and uses [select](https://supabase.com/docs/reference/javascript/select)
@@ -209,15 +209,28 @@ initial support requests and notes use idempotent database functions. Create
 requests carry stable UUIDs to prevent duplicates on retries. Case prices are
 set server-side and stored in tomans (IRT), separately from receipt records.
 
-## Direct integrations still pending
+## Payment integration and legacy endpoint
 
-No direct payment provider has been selected or implemented. Public registration
-remains in preview, and a validated public POST returns 503 without collecting
-data, charging money or sending SMS. Legacy configuration cannot enable checkout.
-The existing injected provider-contract tests do not constitute a live integration.
+The interactive journey uses `/api/experience` and the server-only Zarinpal boundary.
+Live activation still requires the configuration and staging checks in
+[docs/growth-setup.md](docs/growth-setup.md). The retired `/api/registration` bridge
+continues returning 503; stale legacy flags cannot enable it. Its retained injectable
+contract tests do not exercise the new gateway or establish live connectivity.
 Manual receipts are not bank verification; a refund record does not transfer money.
 
 The server-side Melipayamak adapter and its isolated provider tests remain, but
 public registration no longer invokes the retired external notification bridge.
 Automatic messaging needs a durable Supabase claim and provider verification
 before activation. Support notes are internal; they do not send email or SMS.
+
+## Interactive journey, campaigns and chat
+
+The public entry flow now supports reversible steps, server-priced campaign discounts,
+zero-balance completion, an explicit payment simulator and a Zarinpal boundary. Staff manage
+campaigns, website orders and customer chat in `/backoffice/campaigns`, `/backoffice/orders`
+and `/backoffice/chat`. Internal support notes stay separate from customer messages.
+
+Run `npm run demo` for an isolated local review without real service credentials. Setup,
+synthetic demo credentials, migration order, environment modes and verification limits are
+in [docs/growth-setup.md](docs/growth-setup.md). The marketing review and measurement plan are
+in [docs/conversion-review.md](docs/conversion-review.md).

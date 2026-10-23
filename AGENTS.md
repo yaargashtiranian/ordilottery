@@ -72,6 +72,23 @@
 - Keep the implementation within agreed scope; raise concrete blockers while continuing independent work. Do not deploy or publish without authorization.
 - Report what changed, what was verified, and any remaining integration or product decisions concisely.
 
+## Growth features (2026-10-23)
+
+- Read `docs/growth-setup.md` before changing campaigns, checkout, or customer chat. The default is disabled; simulation never creates real CRM cases or bank receipts.
+- Preserve campaign/order row locking, immutable price snapshots, input/guest idempotency and the distinction between coupon credit, bank receipts and manual receipts. A browser redirect is never proof of payment.
+- Customer chat is separate from internal ticket notes. The opaque guest cookie only grants access to its own chat/orders; it never authorizes documents.
+- Use `npm run demo` with synthetic information for review and `npm run test:growth` for the isolated SQL-backed browser suite. Do not treat either as evidence of live Supabase, Auth email or payment connectivity.
+
 ## Skills
 
 No project-specific skill is needed yet. Add one only for a concrete repeated workflow that benefits from it; do not create a boilerplate `skills.md` to restate these instructions.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
