@@ -13,7 +13,9 @@
     "test:e2e": "playwright test",
     "test:operations-ui": "node --import tsx scripts/qa-operations.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:growth": "playwright test --config playwright.growth.config.ts",
+    "demo": "node --import tsx scripts/demo.ts"
   },
   "engines": {
     "node": ">=24 <25"
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
+    "@electric-sql/pglite": "0.5.11",
     "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.6.5",

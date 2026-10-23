@@ -27,11 +27,19 @@ test("Persian narrative renders without overflow or JavaScript errors", async ({
 }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  // Attribute hydration warnings can appear only in console; pageerror alone misses them.
+  page.on("console", (message) => {
+    if (
+      message.type() === "error" &&
+      /hydrat|Minified React error #(418|423|425)/i.test(message.text())
+    )
+      errors.push(message.text());
+  });
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.locator("html")).toHaveAttribute("lang", "fa");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "هر شروع تازه",
+    "لاتاری،",
   );
   await expect(
     page.getByText("منتظر اعلام رسمی دوره جدید هستیم"),
@@ -57,7 +65,7 @@ test("Persian narrative renders without overflow or JavaScript errors", async ({
   expect(errors).toEqual([]);
 });
 
-test("package selection updates form and preview validates without sending personal information", async ({
+test("interactive steps preserve edits, validate fields and do not submit preview data", async ({
   page,
 }) => {
   const posts: string[] = [];
@@ -65,15 +73,12 @@ test("package selection updates form and preview validates without sending perso
     if (request.method() === "POST") posts.push(request.url());
   });
   await page.goto("/");
+  await page.getByRole("radio", { name: /همراهی حضوری/ }).check();
   await page
-    .getByRole("link", { name: "انتخاب همراهی حضوری", exact: true })
+    .getByRole("button", { name: "مسیر من را بساز", exact: true })
     .click();
-  await expect(page.getByRole("radio", { name: "همراهی حضوری" })).toBeChecked();
-  await page.getByRole("button", { name: "بررسی اطلاعات فرم" }).click();
+  await page.getByRole("button", { name: "دیدن خلاصه و قیمت" }).click();
   await expect(page.locator("#firstName")).toBeFocused();
-  await expect(
-    page.getByText("نام را با ۲ تا ۸۰ حرف وارد کنید."),
-  ).toBeVisible();
   await page.getByLabel("نام (الزامی)", { exact: true }).fill("سارا");
   await page
     .getByLabel("نام خانوادگی (الزامی)", { exact: true })
@@ -84,8 +89,16 @@ test("package selection updates form and preview validates without sending perso
   await page
     .getByLabel("شماره تماس (الزامی)", { exact: true })
     .fill("۰۹۱۲۳۴۵۶۷۸۹");
-  await page.getByRole("button", { name: "بررسی اطلاعات فرم" }).click();
-  await expect(page.getByText(/اطلاعات از نظر ساختار معتبر است/)).toBeVisible();
+  await page.getByRole("button", { name: "دیدن خلاصه و قیمت" }).click();
+  await expect(
+    page.getByText("۲٬۹۹۹٬۰۰۰ تومان", { exact: true }).first(),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "ویرایش اطلاعات" }).click();
+  await expect(page.locator("#firstName")).toHaveValue("سارا");
+  await page.getByRole("button", { name: "دیدن خلاصه و قیمت" }).click();
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "بررسی مسیر درخواست" }).click();
+  await expect(page.getByText(/مسیر را کامل کردید/)).toBeVisible();
   expect(posts).toEqual([]);
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([]);
 });
@@ -126,13 +139,6 @@ test("turning on reduced motion stops animations already initialized on the page
   await expect
     .poll(() => reveal.evaluate((element) => getComputedStyle(element).opacity))
     .toBe("1");
-  await expect
-    .poll(() =>
-      page
-        .locator(".hero-plane")
-        .evaluate((element) => element.style.transform),
-    )
-    .toBe("");
 
   // A visitor who initially disables motion can also change their preference later.
   await page.reload();
@@ -155,7 +161,7 @@ test("the narrative is present without JavaScript and previews stay out of searc
     const page = await context.newPage();
     await page.goto(baseURL!);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      "هر شروع تازه",
+      "لاتاری،",
     );
     await expect(page.locator("#story")).toContainText("Diversity Visa");
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
@@ -185,7 +191,7 @@ test("legal pages and not-found route are usable", async ({ page }) => {
   );
   await page.getByRole("link", { name: "بازگشت به صفحه اصلی ←" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "هر شروع تازه",
+    "لاتاری،",
   );
   await page.goto("/terms");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(

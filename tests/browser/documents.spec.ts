@@ -48,8 +48,12 @@ test("private document API denies anonymous/cross-site requests and portal has a
   ).toBe(403);
   await page.goto("/portal");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "مدارک پرونده",
+    "خوش برگشتی",
   );
+  await page
+    .getByLabel("ایمیل ثبت‌شده در پرونده")
+    .fill("customer@example.invalid");
+  await page.getByRole("button", { name: "ادامه با ایمیل من" }).click();
   await page.getByLabel("ایمیل ثبت‌شده در پرونده").focus();
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("رمز عبور")).toBeFocused();

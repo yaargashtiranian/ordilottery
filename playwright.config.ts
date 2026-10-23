@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 /** Use the cloud browser when present; standard Playwright installs work elsewhere. */
 export default defineConfig({
   testDir: "tests/browser",
+  testIgnore: /growth\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
@@ -36,6 +37,11 @@ export default defineConfig({
     // Always test the current build, never a process left behind by another run.
     reuseExistingServer: false,
     env: {
+      SUPABASE_URL: "http://127.0.0.1:9",
+      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_test_only",
+      SUPABASE_SERVICE_ROLE_KEY: "",
+      COMMERCE_MODE: "disabled",
+      BACKOFFICE_LOCAL_HTTP: "true",
       ENABLE_CHECKOUT: "false",
       ENABLE_MELIPAYAMAK: "false",
       SITE_URL: "",
