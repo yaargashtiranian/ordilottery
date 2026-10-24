@@ -76,7 +76,7 @@ test("SMS signup creates a phone-proven account with password login while keepin
     .click();
   await page.getByLabel("کد تأیید", { exact: true }).fill("0741437414");
   const axe = await new AxeBuilder({ page })
-    .include(".bo-login-panel")
+    .include(".portal-auth-panel")
     .analyze();
   expect(axe.violations).toEqual([]);
   await page

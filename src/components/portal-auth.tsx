@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { customerProfile } from "@/lib/customer-verification";
 import { verifyCustomer } from "./customer-verification";
+import { SignInPage } from "@/components/ui/sign-in";
+import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 
-/** Real email signup and explicitly local test-phone signup remain distinct identity paths. */
+/** Template presentation shares the existing real email/phone flow, without persisting or logging credentials. */
 export function PortalAuth() {
   const router = useRouter();
   const [register, setRegister] = useState(false),
@@ -26,6 +28,7 @@ export function PortalAuth() {
     [challenge, setChallenge] = useState(""),
     [code, setCode] = useState("");
   const [busy, setBusy] = useState(false),
+    [showPassword, setShowPassword] = useState(false),
     [message, setMessage] = useState(""),
     [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -104,217 +107,262 @@ export function PortalAuth() {
     setPhoneVerified(false);
     setCode("");
     setPassword("");
+    setShowPassword(false);
     setMessage("");
   }
   return (
-    <form className="bo-login-form" onSubmit={submit}>
-      {register ? (
-        <fieldset
-          disabled={busy || Boolean(challenge)}
-          className="portal-profile-fields"
-        >
-          {(
-            [
-              ["firstName", "نام", "given-name"],
-              ["lastName", "نام خانوادگی", "family-name"],
-              ["email", "ایمیل", "email"],
-              ["phone", "شماره موبایل", "tel"],
-            ] as const
-          ).map(([key, label, autoComplete]) => (
-            <div key={key}>
-              <Label htmlFor={`portal-${key}`}>{label}</Label>
-              <Input
-                id={`portal-${key}`}
-                value={profile[key]}
-                type={
-                  key === "email" ? "email" : key === "phone" ? "tel" : "text"
-                }
-                dir={["email", "phone"].includes(key) ? "ltr" : undefined}
-                autoComplete={autoComplete}
-                required
-                maxLength={key === "email" ? 254 : key === "phone" ? 25 : 80}
-                onChange={(event) =>
-                  setProfile((current) => ({
-                    ...current,
-                    [key]: event.target.value,
-                  }))
-                }
-              />
-            </div>
-          ))}
-        </fieldset>
-      ) : (
-        <div>
-          <Label htmlFor="customer-identifier">ایمیل یا موبایل</Label>
-          <Input
-            id="customer-identifier"
-            autoComplete="username"
-            dir="ltr"
-            required
-            maxLength={254}
-            value={identifier}
-            disabled={busy}
-            onChange={(event) => setIdentifier(event.target.value)}
-          />
-        </div>
-      )}
-      <div>
-        <Label htmlFor="customer-password">رمز عبور</Label>
-        <Input
-          id="customer-password"
-          type="password"
-          autoComplete={register ? "new-password" : "current-password"}
-          dir="ltr"
-          required
-          minLength={8}
-          maxLength={128}
-          disabled={busy || Boolean(challenge)}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-      </div>
-      {register && !challenge ? (
-        <fieldset disabled={busy} className="portal-verification-method">
-          <legend>روش تأیید</legend>
-          <Label>
-            <input
-              type="radio"
-              name="verification-method"
-              checked={method === "email"}
-              onChange={() => setMethod("email")}
-            />
-            ایمیل
-          </Label>
-          {testPhone ? (
-            <Label>
-              <input
-                type="radio"
-                name="verification-method"
-                checked={method === "test_phone"}
-                onChange={() => setMethod("test_phone")}
-              />
-              موبایل (آزمایشی)
-            </Label>
-          ) : null}
-          {phone && (
-            <Label>
-              <input
-                type="radio"
-                name="verification-method"
-                checked={method === "mobile"}
-                onChange={() => setMethod("mobile")}
-              />
-              موبایل
-            </Label>
-          )}
-        </fieldset>
-      ) : null}
-      {challenge ? (
-        <div>
-          {method === "test_phone" ? (
-            <p>
-              کد آزمایشی: <bdi>123456</bdi>
-            </p>
-          ) : null}
-          <Label htmlFor="portal-code">کد تأیید</Label>
-          <Input
-            id="portal-code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            dir="ltr"
-            maxLength={method === "mobile" ? 10 : 6}
-            value={code}
-            disabled={busy}
-            onChange={(event) => setCode(event.target.value)}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={busy}
-            onClick={() => {
-              setChallenge("");
-              setPhoneVerified(false);
-              setCode("");
-            }}
+    <SignInPage
+      title={
+        challenge
+          ? "تأیید شماره موبایل"
+          : register
+            ? "ساخت حساب مشتری"
+            : "ورود به پرتال مشتری"
+      }
+      description={
+        register ? "همراه یک شروع تازه." : "خوش آمدید؛ مسیرتان را ادامه دهید."
+      }
+    >
+      <form className="portal-auth-form" onSubmit={submit} aria-busy={busy}>
+        {register ? (
+          <fieldset
+            disabled={busy || Boolean(challenge)}
+            className="portal-profile-fields"
           >
-            ویرایش اطلاعات
-          </Button>
-          {method === "mobile" && (
-            <Button
-              type="button"
-              variant="ghost"
+            {(
+              [
+                ["firstName", "نام", "given-name"],
+                ["lastName", "نام خانوادگی", "family-name"],
+                ["email", "ایمیل", "email"],
+                ["phone", "شماره موبایل", "tel"],
+              ] as const
+            ).map(([key, label, autoComplete]) => (
+              <div key={key}>
+                <Label htmlFor={`portal-${key}`}>{label}</Label>
+                <Input
+                  id={`portal-${key}`}
+                  value={profile[key]}
+                  type={
+                    key === "email" ? "email" : key === "phone" ? "tel" : "text"
+                  }
+                  dir={["email", "phone"].includes(key) ? "ltr" : undefined}
+                  autoComplete={autoComplete}
+                  required
+                  maxLength={key === "email" ? 254 : key === "phone" ? 25 : 80}
+                  onChange={(event) =>
+                    setProfile((current) => ({
+                      ...current,
+                      [key]: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            ))}
+          </fieldset>
+        ) : (
+          <div>
+            <Label htmlFor="customer-identifier">ایمیل یا موبایل</Label>
+            <Input
+              id="customer-identifier"
+              autoComplete="username"
+              dir="ltr"
+              required
+              maxLength={254}
+              value={identifier}
               disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                setMessage("");
-                setFailed(false);
-                try {
-                  const result = await verifyCustomer({
-                    action: "start",
-                    profile,
-                    channel: "mobile",
-                  });
-                  setChallenge(result.challenge);
+              onChange={(event) => setIdentifier(event.target.value)}
+            />
+          </div>
+        )}
+        <div>
+          <Label htmlFor="customer-password">رمز عبور</Label>
+          <div className="portal-auth-password">
+            <Input
+              id="customer-password"
+              type={showPassword ? "text" : "password"}
+              autoComplete={register ? "new-password" : "current-password"}
+              dir="ltr"
+              required
+              minLength={8}
+              maxLength={128}
+              disabled={busy || Boolean(challenge)}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <button
+              type="button"
+              className="portal-auth-password-toggle"
+              aria-label={
+                showPassword ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"
+              }
+              aria-controls="customer-password"
+              aria-pressed={showPassword}
+              disabled={busy || Boolean(challenge)}
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? (
+                <EyeOff size={19} aria-hidden="true" />
+              ) : (
+                <Eye size={19} aria-hidden="true" />
+              )}
+            </button>
+          </div>
+        </div>
+        {register && !challenge ? (
+          <fieldset disabled={busy} className="portal-verification-method">
+            <legend>روش تأیید</legend>
+            <Label>
+              <input
+                type="radio"
+                name="verification-method"
+                checked={method === "email"}
+                onChange={() => setMethod("email")}
+              />
+              ایمیل
+            </Label>
+            {testPhone ? (
+              <Label>
+                <input
+                  type="radio"
+                  name="verification-method"
+                  checked={method === "test_phone"}
+                  onChange={() => setMethod("test_phone")}
+                />
+                موبایل (آزمایشی)
+              </Label>
+            ) : null}
+            {phone && (
+              <Label>
+                <input
+                  type="radio"
+                  name="verification-method"
+                  checked={method === "mobile"}
+                  onChange={() => setMethod("mobile")}
+                />
+                موبایل
+              </Label>
+            )}
+          </fieldset>
+        ) : null}
+        {challenge ? (
+          <div>
+            {method === "test_phone" ? (
+              <p>
+                کد آزمایشی: <bdi>123456</bdi>
+              </p>
+            ) : null}
+            <Label htmlFor="portal-code">کد تأیید</Label>
+            <Input
+              id="portal-code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              dir="ltr"
+              maxLength={method === "mobile" ? 10 : 6}
+              value={code}
+              disabled={busy}
+              onChange={(event) => setCode(event.target.value)}
+            />
+            <div className="portal-auth-code-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => {
+                  setChallenge("");
                   setPhoneVerified(false);
                   setCode("");
-                } catch (error) {
-                  setFailed(true);
-                  setMessage(
-                    error instanceof Error ? error.message : "ارسال انجام نشد.",
-                  );
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              ارسال دوباره
-            </Button>
-          )}
-        </div>
-      ) : null}
-      {message ? (
-        <p
-          role={failed ? "alert" : "status"}
-          className={failed ? "bo-error" : "bo-success"}
+                }}
+              >
+                ویرایش اطلاعات
+              </Button>
+              {method === "mobile" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    setMessage("");
+                    setFailed(false);
+                    try {
+                      const result = await verifyCustomer({
+                        action: "start",
+                        profile,
+                        channel: "mobile",
+                      });
+                      setChallenge(result.challenge);
+                      setPhoneVerified(false);
+                      setCode("");
+                    } catch (error) {
+                      setFailed(true);
+                      setMessage(
+                        error instanceof Error
+                          ? error.message
+                          : "ارسال انجام نشد.",
+                      );
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  ارسال دوباره
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : null}
+        {message ? (
+          <p
+            role={failed ? "alert" : "status"}
+            className={`portal-auth-feedback ${failed ? "" : "is-success"}`}
+          >
+            {message}
+          </p>
+        ) : null}
+        <Button
+          className="portal-auth-submit"
+          type="submit"
+          disabled={
+            busy ||
+            (Boolean(challenge) &&
+              !phoneVerified &&
+              (method === "mobile"
+                ? !/^[0-9۰-۹٠-٩]{4,10}$/.test(code)
+                : code.length !== 6))
+          }
         >
-          {message}
-        </p>
-      ) : null}
-      <Button
-        type="submit"
-        disabled={
-          busy ||
-          (Boolean(challenge) &&
-            !phoneVerified &&
-            (method === "mobile"
-              ? !/^[0-9۰-۹٠-٩]{4,10}$/.test(code)
-              : code.length !== 6))
-        }
-      >
-        {busy
-          ? "در حال بررسی…"
-          : register
-            ? challenge
-              ? "تأیید و ساخت حساب"
-              : "ساخت حساب مشتری"
-            : "ورود به پرتال"}
-      </Button>
-      <Button type="button" variant="ghost" disabled={busy} onClick={reset}>
-        {register ? "حساب دارید؟ وارد شوید" : "ساخت حساب مشتری"}
-      </Button>
-      {register ? (
-        <p className="bo-login-hint">
-          با ثبت‌نام،{" "}
-          <a href="/terms" target="_blank" rel="noreferrer">
-            شرایط خدمات
-          </a>{" "}
-          و{" "}
-          <a href="/privacy" target="_blank" rel="noreferrer">
-            حریم خصوصی
-          </a>{" "}
-          را می‌پذیرم.
-        </p>
-      ) : null}
-    </form>
+          {busy && (
+            <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+          )}
+          {busy
+            ? "در حال بررسی…"
+            : register
+              ? challenge
+                ? "تأیید و ساخت حساب"
+                : "ساخت حساب مشتری"
+              : "ورود به پرتال"}
+          {!busy && <ArrowLeft size={17} aria-hidden="true" />}
+        </Button>
+        <div className="portal-auth-switch">
+          {!register && <span>هنوز حساب ندارید؟</span>}
+          <button type="button" disabled={busy} onClick={reset}>
+            {register ? "حساب دارید؟ وارد شوید" : "ساخت حساب مشتری"}
+          </button>
+        </div>
+        {register ? (
+          <p className="bo-login-hint">
+            با ثبت‌نام،{" "}
+            <a href="/terms" target="_blank" rel="noreferrer">
+              شرایط خدمات
+            </a>{" "}
+            و{" "}
+            <a href="/privacy" target="_blank" rel="noreferrer">
+              حریم خصوصی
+            </a>{" "}
+            را می‌پذیرم.
+          </p>
+        ) : null}
+      </form>
+    </SignInPage>
   );
 }

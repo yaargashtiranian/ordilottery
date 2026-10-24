@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Guide } from "@/components/growth/guide";
 import { brand } from "@/lib/site";
 import { PortalAuth } from "@/components/portal-auth";
 import { createBackofficeClient } from "@/lib/backoffice-auth";
@@ -43,21 +42,7 @@ export default async function PortalPage() {
         </main>
       );
   }
-  if (!session)
-    return (
-      <main className="bo-login">
-        <section className="bo-login-panel">
-          <Link className="bo-wordmark" href="/">
-            {brand.name}
-          </Link>
-          <div className="bo-login-heading">
-            <Guide small />
-            <h1>پرتال مشتری</h1>
-          </div>
-          <PortalAuth />
-        </section>
-      </main>
-    );
+  if (!session) return <PortalAuth />;
   const { data, error } = await session.client
     .from("crm_document_access")
     .select("*")
