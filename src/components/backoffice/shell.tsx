@@ -1,4 +1,5 @@
 "use client";
+import { type StaffAccess, hasStaffAccess } from "@/lib/backoffice-permissions";
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -23,6 +24,13 @@ import { Button } from "@/components/ui/button";
 import { SupportNotifications } from "@/components/growth/support-notifications";
 
 const navigation = [
+  {
+    key: "users",
+    href: "/backoffice/users",
+    label:
+      "\u06a9\u0627\u0631\u0628\u0631\u0627\u0646 \u0648 \u062f\u0633\u062a\u0631\u0633\u06cc\u200c\u0647\u0627",
+    icon: ShieldCheck,
+  },
   {
     key: "campaigns",
     href: "/backoffice/campaigns",
@@ -76,12 +84,14 @@ const navigation = [
 
 /** All workspaces share navigation and private-session controls; records stay behind server authorization. */
 export function BackofficeShell({
+  access,
   email,
   title,
   active,
   children,
   beforeNavigate,
 }: {
+  access: StaffAccess;
   email: string;
   title: string;
   active: string;
@@ -155,17 +165,19 @@ export function BackofficeShell({
         </div>
         <span className="bo-nav-caption">فضای کاری تیم</span>
         <nav aria-label="منوی بک‌آفیس">
-          {navigation.map(({ key, href, label, icon: Icon }) => (
-            <a
-              key={key}
-              href={href}
-              className={active === key ? "active" : ""}
-              aria-current={active === key ? "page" : undefined}
-            >
-              <Icon size={18} />
-              {label}
-            </a>
-          ))}
+          {navigation
+            .filter(({ key }) => hasStaffAccess(access, key))
+            .map(({ key, href, label, icon: Icon }) => (
+              <a
+                key={key}
+                href={href}
+                className={active === key ? "active" : ""}
+                aria-current={active === key ? "page" : undefined}
+              >
+                <Icon size={18} />
+                {label}
+              </a>
+            ))}
           <a href="/" target="_blank" rel="noreferrer">
             <ArrowUpLeft size={18} />
             مشاهده وب‌سایت
@@ -179,7 +191,7 @@ export function BackofficeShell({
         <div className="bo-profile">
           <span className="bo-avatar">م</span>
           <div>
-            <strong>مدیر وب‌سایت</strong>
+            <strong>{access.is_owner ? "مالک" : "عضو تیم"}</strong>
             <small dir="ltr">{email}</small>
           </div>
           <Button
@@ -217,7 +229,7 @@ export function BackofficeShell({
             <strong>{title}</strong>
           </div>
           <div className="bo-topbar-tools">
-            <SupportNotifications />
+            {hasStaffAccess(access, "chat") && <SupportNotifications />}
             <span className="ops-private">
               <ShieldCheck size={14} />
               دسترسی مدیریت

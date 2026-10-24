@@ -1998,3 +1998,76 @@ p {
     transform: scaleY(1);
   }
 }
+/* Staff access editor reuses operational cards with a compact RTL layout. */
+.staff-workspace {
+  padding: clamp(1rem, 3vw, 2rem);
+}
+.staff-workspace > .ops-page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.staff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-block: 1.25rem;
+  align-items: start;
+}
+.staff-form {
+  display: grid;
+  gap: 0.8rem;
+}
+.staff-form fieldset {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+.staff-permissions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  padding-block-start: 0.7rem;
+}
+.staff-permissions label,
+.staff-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.staff-permissions input,
+.staff-check input {
+  accent-color: var(--primary);
+  width: 1rem;
+  height: 1rem;
+}
+.staff-member,
+.staff-log {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1rem;
+  padding-block: 1rem;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.staff-member small {
+  display: block;
+  margin-block: 0.3rem;
+}
+.staff-member p,
+.staff-form small,
+.staff-log {
+  font-size: 0.8rem;
+  color: #596b5d;
+}
+@media (max-width: 850px) {
+  .staff-grid {
+    grid-template-columns: 1fr;
+  }
+  .staff-log {
+    flex-wrap: wrap;
+  }
+}

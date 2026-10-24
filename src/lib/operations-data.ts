@@ -1,4 +1,5 @@
 import "server-only";
+import { hasStaffAccess, type StaffAccess } from "./backoffice-permissions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchPattern, type OperationsSection } from "./operations-model";
 import { normalizeDigits } from "./registration";
@@ -88,6 +89,7 @@ export async function loadOperationDetail(
   client: SupabaseClient,
   entity: OperationEntity,
   id: string,
+  access: StaffAccess,
 ) {
   const { data: record, error } = await client
     .from(operationTables[entity])
@@ -146,7 +148,7 @@ export async function loadOperationDetail(
             .order("created_at", { ascending: false })
             .limit(100)
         : Promise.resolve({ data: [], error: null }),
-      entity === "cases"
+      entity === "cases" && hasStaffAccess(access, "payments")
         ? client.rpc("crm_case_financials", { p_case_id: id })
         : Promise.resolve({ data: null, error: null }),
     ]);

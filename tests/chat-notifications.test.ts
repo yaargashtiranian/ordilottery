@@ -42,7 +42,9 @@ test("contact is required atomically; repeated lead capture never merges convers
       "insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())",
       [staffIds[i], email],
     );
-    await db.query("insert into cms_editors(email) values($1)", [email]);
+    await db.query("insert into cms_editors(email,is_owner) values($1,true)", [
+      email,
+    ]);
   }
 });
 async function asStaff(index: number) {

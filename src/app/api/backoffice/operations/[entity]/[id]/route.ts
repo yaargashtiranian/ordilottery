@@ -20,10 +20,15 @@ export async function GET(
   if (!isOperationEntity(entity) || !isUuid(id))
     return backofficeJson({ error: "رکورد پیدا نشد." }, 404);
   try {
-    const session = await getBackofficeSession();
+    const session = await getBackofficeSession(entity);
     if (!session)
       return backofficeJson({ error: "دسترسی مدیریت لازم است." }, 401);
-    const data = await loadOperationDetail(session.client, entity, id);
+    const data = await loadOperationDetail(
+      session.client,
+      entity,
+      id,
+      session.access,
+    );
     return data
       ? backofficeJson(data)
       : backofficeJson({ error: "رکورد پیدا نشد." }, 404);
@@ -43,7 +48,7 @@ export async function PATCH(
   if (!isOperationEntity(entity) || entity === "payments" || !isUuid(id))
     return backofficeJson({ error: "ویرایش این رکورد مجاز نیست." }, 404);
   try {
-    const session = await getBackofficeSession();
+    const session = await getBackofficeSession(entity);
     if (!session)
       return backofficeJson({ error: "دسترسی مدیریت لازم است." }, 401);
     const input = await readBackofficeBody(request, 24000);

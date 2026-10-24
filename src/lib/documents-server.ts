@@ -1,4 +1,5 @@
 import "server-only";
+import { hasStaffAccess, type StaffAccess } from "./backoffice-permissions";
 import { createBackofficeClient } from "@/lib/backoffice-auth";
 import {
   documentRules,
@@ -25,7 +26,7 @@ type Session = NonNullable<Awaited<ReturnType<typeof documentSession>>>;
 type RouteContext = { params: Promise<{ id: string }> };
 type AccessState = DocumentAccess & { expired: boolean };
 
-/** A confirmed customer can use only explicit case invitations; staff retain existing membership checks. */
+/** Customers use explicit invitations; staff document authority is separate from other backoffice sections. */
 export async function documentSession() {
   const client = await createBackofficeClient();
   const {
@@ -41,11 +42,15 @@ export async function documentSession() {
     return null;
   const { data, error: membershipError } = await client
     .from("cms_editors")
-    .select("email")
+    .select("enabled,is_owner,permissions")
     .eq("email", user.email.toLowerCase())
     .maybeSingle();
   if (membershipError) throw membershipError;
-  return { client, user, staff: Boolean(data) };
+  return {
+    client,
+    user,
+    staff: data ? hasStaffAccess(data as StaffAccess, "documents") : false,
+  };
 }
 function fail(error: string, status = 400) {
   return backofficeJson({ error }, status);

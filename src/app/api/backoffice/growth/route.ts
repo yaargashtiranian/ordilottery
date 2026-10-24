@@ -1,3 +1,4 @@
+import { hasStaffAccess } from "@/lib/backoffice-permissions";
 import { getBackofficeSession } from "@/lib/backoffice-auth";
 import {
   backofficeJson as json,
@@ -16,6 +17,13 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const section = url.searchParams.get("section");
     const id = url.searchParams.get("id");
+    if (
+      !hasStaffAccess(
+        session.access,
+        section === "notifications" ? "chat" : (section ?? ""),
+      )
+    )
+      return json({ error: "دسترسی این بخش را ندارید." }, 403);
     if (section === "notifications") {
       const result = await client.rpc("growth_staff_notifications");
       if (result.error) throw new Error();
@@ -87,6 +95,15 @@ export async function POST(request: Request) {
   try {
     const session = await getBackofficeSession();
     if (!session) return json({ error: "ورود مدیریت لازم است." }, 401);
+    const permission = [
+      "reply",
+      "chat_read",
+      "notifications_read_all",
+    ].includes(String(input.action))
+      ? "chat"
+      : "campaigns";
+    if (!hasStaffAccess(session.access, permission))
+      return json({ error: "دسترسی این بخش را ندارید." }, 403);
     let result;
     if (
       input.action === "chat_read" ||

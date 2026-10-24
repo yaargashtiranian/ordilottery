@@ -74,6 +74,84 @@ async function staff(page: Page) {
   await expect(page).toHaveURL(/\/backoffice$/);
 }
 
+test("staff manager can create and revoke a section grant with durable audit", async ({
+  page,
+  browser,
+  baseURL,
+}, testInfo) => {
+  await staff(page);
+  await page.goto("/backoffice/users");
+  const email = `staff-${testInfo.project.name}-${randomUUID()}@example.invalid`;
+  await page
+    .getByLabel("نام و نام خانوادگی", { exact: true })
+    .fill("کارشناس آزمایشی");
+  await page.getByLabel("ایمیل", { exact: true }).fill(email);
+  await page.getByLabel("مدارک پرونده", { exact: true }).check();
+  await expect(page.getByLabel("پرونده‌ها", { exact: true })).toBeChecked();
+  await expect(page.getByLabel("مشتریان", { exact: true })).toBeChecked();
+  await page.getByRole("button", { name: "ذخیره کاربر", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText("کاربر ذخیره شد.");
+  const row = page
+    .locator(".staff-member")
+    .filter({ has: page.locator("small", { hasText: email }) });
+  await expect(row).toBeVisible();
+  await expect(row).toContainText("مدارک پرونده");
+  const registration = await browser.newContext({ baseURL });
+  try {
+    const allowed = await registration.request.post("/api/backoffice/session", {
+      headers: { Origin: baseURL! },
+      data: { email, password: "synthetic-staff-password", action: "register" },
+    });
+    expect(allowed.status()).toBe(200);
+    expect(await allowed.json()).toEqual({ confirmationRequired: true });
+    const denied = await registration.request.post("/api/backoffice/session", {
+      headers: { Origin: baseURL! },
+      data: {
+        email: `outsider-${randomUUID()}@example.invalid`,
+        password: "synthetic-staff-password",
+        action: "register",
+      },
+    });
+    expect(denied.status()).toBe(403);
+  } finally {
+    await registration.close();
+  }
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
+  const axe = await new AxeBuilder({ page })
+    .include(".staff-workspace")
+    .analyze();
+  expect(axe.violations).toEqual([]);
+  if (testInfo.project.name === "mobile") {
+    await page
+      .getByRole("button", { name: "باز کردن منو", exact: true })
+      .click();
+    await expect(page.getByRole("navigation")).toBeVisible();
+    await page
+      .getByRole("button", { name: "بستن منو", exact: true })
+      .first()
+      .click();
+    await expect(page.getByRole("navigation")).not.toBeVisible();
+  }
+  await page.screenshot({
+    path: testInfo.outputPath("staff-workspace.png"),
+    fullPage: true,
+  });
+  await row.getByRole("button", { name: "ویرایش", exact: true }).click();
+  await page.getByLabel("حساب فعال", { exact: true }).uncheck();
+  await page.getByRole("button", { name: "ذخیره کاربر", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText("کاربر ذخیره شد.");
+  await expect(row).toContainText("غیرفعال");
+  await page.reload();
+  await expect(row).toContainText("غیرفعال");
+  await expect(
+    page.locator(".staff-log").filter({ hasText: email }),
+  ).toHaveCount(2);
+});
+
 test("100% campaign finishes without bank, persists on reload, and refuses a second browser", async ({
   page,
   browser,

@@ -17,7 +17,7 @@ export async function PATCH(
   if (!isPageSlug(slug))
     return backofficeJson({ error: "صفحه پیدا نشد." }, 404);
   try {
-    const session = await getBackofficeSession();
+    const session = await getBackofficeSession("content");
     if (!session)
       return backofficeJson(
         { error: "نشست شما معتبر نیست. دوباره وارد شوید." },

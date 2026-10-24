@@ -52,6 +52,7 @@
   display: flex;
   flex-direction: column;
   z-index: 30;
+  overflow-y: auto;
 }
 .bo-wordmark {
   display: flex;
@@ -1082,6 +1083,9 @@
   }
 }
 @media (max-width: 800px) {
+  .bo-sidebar:not(.is-open) {
+    display: none;
+  }
   .bo-shell {
     display: block;
   }

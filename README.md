@@ -95,13 +95,16 @@ the editor's unsaved text. Published content is server-rendered on each request;
 no rebuild is needed after publication. If Supabase is temporarily unavailable,
 public pages retain the bundled original copy and log a sanitized warning.
 
-For the first administrator, configure `BACKOFFICE_ADMIN_EMAIL` in `.env.local`
-and insert that lowercase email into `public.cms_editors` through the Supabase SQL
-editor. The requested owner's email is already allowed in the connected project.
+The designated owner is already configured in the connected project. Manage
+staff at `/backoffice/users`: add a name and email, select allowed sections,
+and enable or disable access. Section permissions cover both reading and managing;
+related operational sections are selected automatically. User administration is
+a trusted administrator capability because it can delegate all section access.
+Owner access and changes to your own permissions are protected in SQL.
 Choose **اولین ورود؟ ساخت حساب مدیر** on the login screen, use that email, choose
 your password privately, and confirm the email before signing in. This workflow
 does not create an account or send email until you submit the form. The same email
-must appear in Supabase Auth and the editor allowlist. Supabase Dashboard account
+must appear in Supabase Auth and active staff membership. Supabase Dashboard account
 administrators and app content editors are separate identities.
 
 In Supabase Auth, allow your actual site's `/backoffice/login` redirect URL under
@@ -109,7 +112,23 @@ URL Configuration and configure your email provider for production delivery.
 Local development uses `http://localhost:3000/backoffice/login`. Session cookies
 are HTTP-only and SameSite=Lax, with Secure enabled in production. For deliberate
 local production testing over HTTP only, `BACKOFFICE_LOCAL_HTTP=true` disables
-Secure; do not set this on hosted deployments. No service-role key is used.
+Secure; do not set this on hosted deployments. Staff data operations use the
+authenticated caller's RLS. Registration uses the server secret only to check an
+email's eligibility; it never confirms the identity or changes an existing password.
+
+`20261024072534_backoffice_permissions.sql` applies section permissions to tables,
+Storage and staff RPCs, using confirmed Auth identity and current database membership
+rather than editable metadata or stale JWT permissions. Access edits are versioned
+and audited; disablement takes effect on the next request using the existing session.
+Customers retain their independent ownership access. New staff create their own
+password and confirm email through the backoffice login page; existing accounts
+use their existing credentials. The panel does not send invitation emails automatically.
+
+`npm test` includes SQL authorization tests, and `npm run test:growth` covers the
+staff editor on desktop/mobile. To verify real Auth/RLS without sending email/SMS,
+run a local production server on port 3200 with `BACKOFFICE_LOCAL_HTTP=true`, then
+`node --env-file=.env.local --import tsx scripts/qa-staff-live.ts`. This creates and
+removes synthetic temporary accounts and writes screenshots under `test-results/`.
 
 Database migration: `supabase/migrations/20261021133642_backoffice_content.sql`.
 It is already applied to the connected project; it seeds the original public
@@ -183,8 +202,9 @@ All data is persisted in Supabase through authenticated API routes under
 `/api/backoffice/operations`. No WordPress integration is used or required.
 Lists are searched/filtered server-side and paginated in sets of 20. Detail
 history is bounded and the exact financial total is computed separately.
-Only existing administrator allowlist members can read or change these records.
-No customer-facing access is enabled, and no applicant document is uploaded.
+Only active staff with the corresponding section permission can read or change
+these operational records. Customer document access is separately scoped to explicit
+case invitations; private document handling is described above.
 
 The operational schema is applied in migrations
 `20261021141102_operations_workspace.sql` and

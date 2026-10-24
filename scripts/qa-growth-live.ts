@@ -104,9 +104,21 @@ async function main() {
     });
     if (user.error) throw user.error;
     staffId = user.data.user.id;
-    const membership = await db
-      .from("cms_editors")
-      .insert({ email: staffEmail });
+    const membership = await db.from("cms_editors").insert({
+      email: staffEmail,
+      permissions: [
+        "campaigns",
+        "orders",
+        "chat",
+        "customers",
+        "cases",
+        "payments",
+        "support",
+        "documents",
+        "overview",
+        "content",
+      ],
+    });
     if (membership.error) throw membership.error;
     const customer = await context(),
       page = await customer.newPage();

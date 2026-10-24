@@ -1,6 +1,10 @@
 -- Entire scenario rolls back: fake claims and metadata never become real applicant documents.
 begin;
-insert into public.cms_editors(email) values('documents-test@example.invalid');
+insert into auth.users(id,email,email_confirmed_at) values
+('00000000-0000-4000-8000-000000000001','documents-test@example.invalid',now()),
+('00000000-0000-4000-8000-000000000002','documents-owner@example.invalid',now()),
+('00000000-0000-4000-8000-000000000003','documents-other@example.invalid',now());
+insert into public.cms_editors(email,permissions) values('documents-test@example.invalid',array['documents','cases','customers']);
 set local role authenticated;
 select set_config('request.jwt.claims','{"role":"authenticated","email":"documents-test@example.invalid","sub":"00000000-0000-4000-8000-000000000001"}',true);
 insert into public.crm_customers(id,first_name,last_name,email,phone) values

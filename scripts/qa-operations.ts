@@ -289,7 +289,7 @@ export default async function Preview({searchParams}:{searchParams:Promise<{sect
 if(process.env.NODE_ENV!=="development")notFound();
 const params=await searchParams;
 const section=Object.hasOwn(sections,params.section??"")?params.section as OperationsSection:"overview";
-return <div className="backoffice"><OperationsWorkspace key={section+(params.id??"")} email="manager@example.invalid" section={section} initialData={fixturePayload(section)} initialId={params.id}/></div>;
+return <div className="backoffice"><OperationsWorkspace key={section+(params.id??"")} access={{enabled:true,is_owner:true,permissions:[]}} email="manager@example.invalid" section={section} initialData={fixturePayload(section)} initialId={params.id}/></div>;
 }`,
   );
   try {

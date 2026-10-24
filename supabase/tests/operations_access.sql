@@ -1,6 +1,7 @@
 -- Exercise real RLS/triggers/functions without leaving test contacts, receipts or accounts.
 begin;
-insert into public.cms_editors(email) values('operations-test@example.invalid');
+insert into auth.users(id,email,email_confirmed_at) values('00000000-0000-4000-8000-000000000001','operations-test@example.invalid',now());
+insert into public.cms_editors(email,permissions) values('operations-test@example.invalid',array['customers','cases','payments','orders','support','overview']);
 set local role authenticated;
 select set_config('request.jwt.claims','{"role":"authenticated","email":"operations-test@example.invalid","sub":"00000000-0000-4000-8000-000000000001"}',true);
 do $$

@@ -2,6 +2,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { isTestLoginEmail } from "./customer-verification";
+import { type StaffAccess, hasStaffAccess } from "./backoffice-permissions";
 
 /** Tokens live in HTTP-only cookies; authenticated RLS remains the write authority. */
 export async function createBackofficeClient() {
@@ -41,8 +42,8 @@ export async function createBackofficeClient() {
   });
 }
 
-/** Verify the identity remotely, then check a server-managed editor allowlist. */
-export async function getBackofficeSession() {
+/** Verify identity remotely, then resolve active section permissions from current database membership. */
+export async function getBackofficeSession(section?: string) {
   const client = await createBackofficeClient();
   const {
     data: { user },
@@ -57,9 +58,14 @@ export async function getBackofficeSession() {
     return null;
   const { data: editor, error: editorError } = await client
     .from("cms_editors")
-    .select("email")
+    .select("email,display_name,enabled,is_owner,permissions,revision")
     .eq("email", user.email.toLowerCase())
     .maybeSingle();
-  if (editorError || !editor) return null;
-  return { client, user };
+  if (editorError) throw editorError;
+  const access = editor as
+    (StaffAccess & { display_name: string; revision: number }) | null;
+  if (!access?.enabled || (!access.is_owner && !access.permissions.length))
+    return null;
+  if (section && !hasStaffAccess(access, section)) return null;
+  return { client, user, access };
 }

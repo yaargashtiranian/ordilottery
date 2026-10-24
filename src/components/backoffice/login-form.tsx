@@ -46,7 +46,7 @@ export function LoginForm({ portal = false }: { portal?: boolean }) {
         );
         setRegister(false);
       } else {
-        router.push(portal ? "/portal" : "/backoffice");
+        router.push(portal ? "/portal" : result.next || "/backoffice");
         router.refresh();
       }
     } catch (error) {
@@ -136,7 +136,7 @@ export function LoginForm({ portal = false }: { portal?: boolean }) {
       <p className="bo-login-hint">
         {portal
           ? "از همان ایمیل پرونده استفاده کنید؛ تأیید ایمیل برای مشاهده مدارک لازم است."
-          : "ساخت حساب فقط برای ایمیل مدیر تعیین‌شده امکان‌پذیر است."}
+          : "ایمیل شما باید در فهرست کاربران مجاز باشد."}
       </p>
     </form>
   );

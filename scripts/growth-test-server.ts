@@ -68,7 +68,9 @@ async function main() {
     "insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())",
     [uid, email],
   );
-  await db.query("insert into cms_editors(email) values($1)", [email]);
+  await db.query("insert into cms_editors(email,is_owner) values($1,true)", [
+    email,
+  ]);
   for (const [code, percent] of [
     ["TEST100", 100],
     ["TEST50", 50],
@@ -86,8 +88,10 @@ async function main() {
     "growth_identity_checks",
     "cms_pages",
     "cms_editors",
+    "backoffice_access_log",
   ]);
   const functions = new Set([
+    "backoffice_save_staff",
     "growth_limit",
     "growth_checkout",
     "growth_complete",

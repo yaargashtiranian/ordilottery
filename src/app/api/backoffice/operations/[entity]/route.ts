@@ -26,7 +26,7 @@ export async function GET(
   if (entity !== "overview" && !isOperationEntity(entity))
     return backofficeJson({ error: "بخش پیدا نشد." }, 404);
   try {
-    const session = await getBackofficeSession();
+    const session = await getBackofficeSession(entity);
     if (!session)
       return backofficeJson({ error: "دسترسی مدیریت لازم است." }, 401);
     const url = new URL(request.url);
@@ -71,7 +71,9 @@ export async function POST(
   if (!isOperationEntity(entity) && entity !== "notes")
     return backofficeJson({ error: "بخش پیدا نشد." }, 404);
   try {
-    const session = await getBackofficeSession();
+    const session = await getBackofficeSession(
+      entity === "notes" ? "support" : entity,
+    );
     if (!session)
       return backofficeJson({ error: "دسترسی مدیریت لازم است." }, 401);
     const input = await readBackofficeBody(request, 24000);

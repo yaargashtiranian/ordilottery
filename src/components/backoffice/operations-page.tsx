@@ -1,3 +1,4 @@
+import { hasStaffAccess, firstStaffPath } from "@/lib/backoffice-permissions";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getBackofficeSession } from "@/lib/backoffice-auth";
@@ -25,6 +26,8 @@ export async function OperationsPage({
     );
   }
   if (!session) redirect("/backoffice/login");
+  if (!hasStaffAccess(session.access, section))
+    redirect(firstStaffPath(session.access));
   let initialData = null;
   let initialError = "";
   try {
@@ -35,6 +38,7 @@ export async function OperationsPage({
   return (
     <OperationsWorkspace
       key={`${section}-${initialId ?? "list"}`}
+      access={session.access}
       email={session.user.email ?? ""}
       section={section}
       initialData={initialData}

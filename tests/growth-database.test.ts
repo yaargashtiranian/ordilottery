@@ -306,7 +306,7 @@ test("verified allowlisted staff can reply and close; unverified staff cannot", 
     "insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())",
     [uid, "staff@example.invalid"],
   );
-  await db.query("insert into cms_editors(email) values($1)", [
+  await db.query("insert into cms_editors(email,is_owner) values($1,true)", [
     "staff@example.invalid",
   ]);
   const cid = (

@@ -1,4 +1,5 @@
 "use client";
+import { type StaffAccess, hasStaffAccess } from "@/lib/backoffice-permissions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -76,12 +77,14 @@ const createLabels = {
 
 /** Private operational state is loaded through the API; errors never become fabricated empty success. */
 export function OperationsWorkspace({
+  access,
   email,
   section,
   initialData,
   initialError = "",
   initialId,
 }: {
+  access: StaffAccess;
   email: string;
   section: OperationsSection;
   initialData: unknown;
@@ -219,7 +222,12 @@ export function OperationsWorkspace({
         ? ticketStatuses
         : paymentStatuses;
   return (
-    <BackofficeShell email={email} title={sections[section]} active={section}>
+    <BackofficeShell
+      access={access}
+      email={email}
+      title={sections[section]}
+      active={section}
+    >
       <main className="bo-content ops-content">
         <div className="bo-page-heading">
           <div>
@@ -294,7 +302,12 @@ export function OperationsWorkspace({
                 </Button>
               </div>
             ) : detail ? (
-              <Detail section={section} data={detail} onForm={setForm} />
+              <Detail
+                access={access}
+                section={section}
+                data={detail}
+                onForm={setForm}
+              />
             ) : null}
           </>
         ) : section === "overview" ? (
@@ -803,10 +816,12 @@ function RecordTable({
 
 /** Contact, review and accounting remain separate; a recorded receipt never claims bank verification. */
 function Detail({
+  access,
   section,
   data,
   onForm,
 }: {
+  access: StaffAccess;
   section: OperationsSection;
   data: OperationDetail;
   onForm: (state: OperationsFormState) => void;
@@ -831,29 +846,33 @@ function Detail({
             >
               ویرایش مشتری
             </Button>
-            <Button
-              onClick={() =>
-                onForm({
-                  entity: "cases",
-                  defaults: { customer_id: customer.id },
-                })
-              }
-            >
-              <Plus />
-              پرونده جدید
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() =>
-                onForm({
-                  entity: "support",
-                  defaults: { customer_id: customer.id },
-                })
-              }
-            >
-              <MessagesSquare />
-              پشتیبانی
-            </Button>
+            {hasStaffAccess(access, "cases") && (
+              <Button
+                onClick={() =>
+                  onForm({
+                    entity: "cases",
+                    defaults: { customer_id: customer.id },
+                  })
+                }
+              >
+                <Plus />
+                پرونده جدید
+              </Button>
+            )}
+            {hasStaffAccess(access, "support") && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  onForm({
+                    entity: "support",
+                    defaults: { customer_id: customer.id },
+                  })
+                }
+              >
+                <MessagesSquare />
+                پشتیبانی
+              </Button>
+            )}
           </div>
         </div>
         <div className="ops-detail-grid">
@@ -872,31 +891,35 @@ function Detail({
                 </Info>
               </dl>
             </Card>
-            <Card className="ops-info-card">
-              <h3>
-                آخرین پرونده‌های مشتری <small>حداکثر ۵۰ مورد</small>
-              </h3>
-              <RelatedCases cases={data.cases} />
-            </Card>
-            <Card className="ops-info-card">
-              <h3>
-                پشتیبانی مشتری <small>۵۰ درخواست آخر</small>
-              </h3>
-              {data.tickets.length ? (
-                data.tickets.map((ticket) => (
-                  <a
-                    className="ops-linked-row"
-                    key={ticket.id}
-                    href={`/backoffice/support?id=${ticket.id}`}
-                  >
-                    <span>{ticket.subject}</span>
-                    <Status value={ticket.status} labels={ticketStatuses} />
-                  </a>
-                ))
-              ) : (
-                <p className="ops-hint">درخواست پشتیبانی ثبت نشده است.</p>
-              )}
-            </Card>
+            {hasStaffAccess(access, "cases") && (
+              <Card className="ops-info-card">
+                <h3>
+                  آخرین پرونده‌های مشتری <small>حداکثر ۵۰ مورد</small>
+                </h3>
+                <RelatedCases cases={data.cases} />
+              </Card>
+            )}
+            {hasStaffAccess(access, "support") && (
+              <Card className="ops-info-card">
+                <h3>
+                  پشتیبانی مشتری <small>۵۰ درخواست آخر</small>
+                </h3>
+                {data.tickets.length ? (
+                  data.tickets.map((ticket) => (
+                    <a
+                      className="ops-linked-row"
+                      key={ticket.id}
+                      href={`/backoffice/support?id=${ticket.id}`}
+                    >
+                      <span>{ticket.subject}</span>
+                      <Status value={ticket.status} labels={ticketStatuses} />
+                    </a>
+                  ))
+                ) : (
+                  <p className="ops-hint">درخواست پشتیبانی ثبت نشده است.</p>
+                )}
+              </Card>
+            )}
           </div>
           <Card className="ops-info-card">
             <h3>
@@ -929,27 +952,34 @@ function Detail({
               <FileCheck2 />
               به‌روزرسانی پرونده
             </Button>
-            <Button
-              variant="outline"
-              onClick={() =>
-                onForm({ entity: "payments", defaults: { case_id: item.id } })
-              }
-            >
-              <Plus />
-              ثبت رسید
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() =>
-                onForm({
-                  entity: "support",
-                  defaults: { customer_id: item.customer_id, case_id: item.id },
-                })
-              }
-            >
-              <MessagesSquare />
-              پشتیبانی
-            </Button>
+            {hasStaffAccess(access, "payments") && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  onForm({ entity: "payments", defaults: { case_id: item.id } })
+                }
+              >
+                <Plus />
+                ثبت رسید
+              </Button>
+            )}
+            {hasStaffAccess(access, "support") && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  onForm({
+                    entity: "support",
+                    defaults: {
+                      customer_id: item.customer_id,
+                      case_id: item.id,
+                    },
+                  })
+                }
+              >
+                <MessagesSquare />
+                پشتیبانی
+              </Button>
+            )}
           </div>
         </div>
         <div className="ops-case-status">
@@ -972,7 +1002,9 @@ function Detail({
             </strong>
           </div>
         </div>
-        <CaseDocuments key={item.id} caseId={item.id} />
+        {hasStaffAccess(access, "documents") && (
+          <CaseDocuments key={item.id} caseId={item.id} />
+        )}
         <div className="ops-detail-grid">
           <div>
             <Card className="ops-info-card">
@@ -1000,57 +1032,61 @@ function Detail({
                 جداگانه بررسی می‌شود. تکمیل خدمت، تأیید ثبت رسمی DV نیست.
               </p>
             </Card>
-            <Card className="ops-info-card">
-              <h3>خلاصه مالی پرونده</h3>
-              <dl>
-                <Info label="مبلغ توافق‌شده">
-                  {money(item.quoted_amount)} تومان
-                </Info>
-                <Info label="خالص رسیدهای دستی">{money(net)} تومان</Info>
-                <Info label="تخفیف کمپین">{money(discount)} تومان</Info>
-                <Info label="پرداخت تأییدشده درگاه">
-                  {money(gateway)} تومان
-                </Info>
-                <Info
-                  label={
-                    balance >= 0
-                      ? "مانده نسبت به مبلغ پرونده"
-                      : "بستانکاری ثبت‌شده"
-                  }
-                >
-                  {money(Math.abs(balance))} تومان
-                </Info>
-              </dl>
-              <p className="ops-hint">
-                جمع مالی شامل همه {money(data.financials?.receipt_count ?? 0)}{" "}
-                سابقه است؛ فهرست زیر حداکثر ۵۰ رسید اخیر را نشان می‌دهد. تطبیق
-                بانکی جداگانه انجام می‌گیرد.
-              </p>
-              {data.payments.map((payment) => (
-                <div className="ops-linked-row" key={payment.id}>
-                  <bdi>{payment.reference}</bdi>
-                  <span>{money(payment.amount)} تومان</span>
-                  <Status value={payment.status} labels={paymentStatuses} />
-                </div>
-              ))}
-            </Card>
-            <Card className="ops-info-card">
-              <h3>پشتیبانی مرتبط</h3>
-              {data.tickets.length ? (
-                data.tickets.map((ticket) => (
-                  <a
-                    className="ops-linked-row"
-                    key={ticket.id}
-                    href={`/backoffice/support?id=${ticket.id}`}
+            {hasStaffAccess(access, "payments") && (
+              <Card className="ops-info-card">
+                <h3>خلاصه مالی پرونده</h3>
+                <dl>
+                  <Info label="مبلغ توافق‌شده">
+                    {money(item.quoted_amount)} تومان
+                  </Info>
+                  <Info label="خالص رسیدهای دستی">{money(net)} تومان</Info>
+                  <Info label="تخفیف کمپین">{money(discount)} تومان</Info>
+                  <Info label="پرداخت تأییدشده درگاه">
+                    {money(gateway)} تومان
+                  </Info>
+                  <Info
+                    label={
+                      balance >= 0
+                        ? "مانده نسبت به مبلغ پرونده"
+                        : "بستانکاری ثبت‌شده"
+                    }
                   >
-                    <span>{ticket.subject}</span>
-                    <Status value={ticket.status} labels={ticketStatuses} />
-                  </a>
-                ))
-              ) : (
-                <p className="ops-hint">درخواست پشتیبانی ثبت نشده است.</p>
-              )}
-            </Card>
+                    {money(Math.abs(balance))} تومان
+                  </Info>
+                </dl>
+                <p className="ops-hint">
+                  جمع مالی شامل همه {money(data.financials?.receipt_count ?? 0)}{" "}
+                  سابقه است؛ فهرست زیر حداکثر ۵۰ رسید اخیر را نشان می‌دهد. تطبیق
+                  بانکی جداگانه انجام می‌گیرد.
+                </p>
+                {data.payments.map((payment) => (
+                  <div className="ops-linked-row" key={payment.id}>
+                    <bdi>{payment.reference}</bdi>
+                    <span>{money(payment.amount)} تومان</span>
+                    <Status value={payment.status} labels={paymentStatuses} />
+                  </div>
+                ))}
+              </Card>
+            )}
+            {hasStaffAccess(access, "support") && (
+              <Card className="ops-info-card">
+                <h3>پشتیبانی مرتبط</h3>
+                {data.tickets.length ? (
+                  data.tickets.map((ticket) => (
+                    <a
+                      className="ops-linked-row"
+                      key={ticket.id}
+                      href={`/backoffice/support?id=${ticket.id}`}
+                    >
+                      <span>{ticket.subject}</span>
+                      <Status value={ticket.status} labels={ticketStatuses} />
+                    </a>
+                  ))
+                ) : (
+                  <p className="ops-hint">درخواست پشتیبانی ثبت نشده است.</p>
+                )}
+              </Card>
+            )}
           </div>
           <Card className="ops-info-card">
             <h3>

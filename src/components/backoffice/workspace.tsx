@@ -1,4 +1,5 @@
 "use client";
+import { type StaffAccess } from "@/lib/backoffice-permissions";
 
 import { BackofficeShell } from "@/components/backoffice/shell";
 import { Badge } from "@/components/ui/badge";
@@ -43,10 +44,12 @@ const hasDraft = (page: ContentPage) =>
 /** One workspace owns loading/error states; no fabricated analytics or successful writes. */
 export function BackofficeWorkspace({
   initialPages,
+  access,
   email,
   initialError = null,
 }: {
   initialPages: ContentPage[];
+  access: StaffAccess;
   email: string;
   initialError?: string | null;
 }) {
@@ -76,6 +79,7 @@ export function BackofficeWorkspace({
   }
   return (
     <BackofficeShell
+      access={access}
       beforeNavigate={() =>
         !navigationDirty ||
         window.confirm("تغییرات ذخیره نشده‌اند. از ویرایش خارج می‌شوید؟")

@@ -1,3 +1,4 @@
+import { hasStaffAccess, firstStaffPath } from "@/lib/backoffice-permissions";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getBackofficeSession } from "@/lib/backoffice-auth";
@@ -24,6 +25,8 @@ export default async function BackofficePage() {
     );
   }
   if (!session) redirect("/backoffice/login");
+  if (!hasStaffAccess(session.access, "content"))
+    redirect(firstStaffPath(session.access));
   const { data, error } = await session.client
     .from("cms_pages")
     .select("*")
@@ -31,6 +34,7 @@ export default async function BackofficePage() {
   return (
     <BackofficeWorkspace
       initialPages={(data ?? []) as ContentPage[]}
+      access={session.access}
       email={session.user.email ?? ""}
       initialError={error ? "دریافت صفحات انجام نشد. دوباره تلاش کنید." : null}
     />

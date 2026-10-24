@@ -1,3 +1,4 @@
+import { hasStaffAccess, firstStaffPath } from "@/lib/backoffice-permissions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBackofficeSession } from "@/lib/backoffice-auth";
@@ -34,8 +35,11 @@ export async function GrowthPage({
     );
   }
   if (!session) redirect("/backoffice/login");
+  if (!hasStaffAccess(session.access, section))
+    redirect(firstStaffPath(session.access));
   return (
     <BackofficeShell
+      access={session.access}
       email={session.user.email!}
       title={titles[section]}
       active={section}

@@ -37,7 +37,7 @@ if (mode === "setup") {
     )
     .join("\n");
   console.log(
-    `begin;\n${accounts}\ninsert into public.cms_editors(email) values('${value.prefix}-staff@example.invalid');\ninsert into public.crm_customers(id,first_name,last_name,email,phone,notes) values('${value.customer}','مشتری','آزمایش مدارک','${value.prefix}-owner@example.invalid','09000000000','Synthetic automated document QA only');\ninsert into public.crm_cases(id,customer_id,plan,quoted_amount) values('${value.caseId}','${value.customer}','online',1499000);\ncommit;`,
+    `begin;\n${accounts}\ninsert into public.cms_editors(email,permissions) values('${value.prefix}-staff@example.invalid',array['documents','cases','customers']);\ninsert into public.crm_customers(id,first_name,last_name,email,phone,notes) values('${value.customer}','مشتری','آزمایش مدارک','${value.prefix}-owner@example.invalid','09000000000','Synthetic automated document QA only');\ninsert into public.crm_cases(id,customer_id,plan,quoted_amount) values('${value.caseId}','${value.customer}','online',1499000);\ncommit;`,
   );
 } else {
   const config: Config = JSON.parse(readFileSync(configPath, "utf8"));

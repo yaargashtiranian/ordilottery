@@ -7,6 +7,8 @@ import {
   isBackofficeOrigin,
   readBackofficeBody,
 } from "@/lib/backoffice-request";
+import { growthClient, limit } from "@/lib/growth/server";
+import { firstStaffPath } from "@/lib/backoffice-permissions";
 
 /** Login and first-account registration always delegate password handling to Supabase. */
 export async function POST(request: Request) {
@@ -29,12 +31,15 @@ export async function POST(request: Request) {
   try {
     const client = await createBackofficeClient();
     if (input.action === "register") {
-      // Only the configured owner may create the first editorial account through this UI.
-      if (
-        !process.env.BACKOFFICE_ADMIN_EMAIL ||
-        input.email.trim().toLowerCase() !==
-          process.env.BACKOFFICE_ADMIN_EMAIL.toLowerCase()
-      ) {
+      // Registration cannot grant membership or change any existing account's password.
+      await limit("staff-registration", 20, 60);
+      const { data: member, error: memberError } = await growthClient()
+        .from("cms_editors")
+        .select("enabled")
+        .eq("email", input.email.trim().toLowerCase())
+        .maybeSingle();
+      if (memberError) throw memberError;
+      if (!member?.enabled) {
         return backofficeJson(
           { error: "این ایمیل برای ساخت حساب مدیریت مجاز نیست." },
           403,
@@ -75,7 +80,7 @@ export async function POST(request: Request) {
       await client.auth.signOut({ scope: "local" });
       return backofficeJson({ error: "این حساب دسترسی مدیریت ندارد." }, 403);
     }
-    return backofficeJson({ ok: true });
+    return backofficeJson({ ok: true, next: firstStaffPath(session.access) });
   } catch {
     return backofficeJson({ error: "ارتباط با سرویس ورود برقرار نشد." }, 503);
   }
