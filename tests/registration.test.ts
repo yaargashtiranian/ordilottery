@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateRegistration, normalizeDigits } from "../src/lib/registration";
+import {
+  validateRegistration,
+  validateContact,
+  normalizeDigits,
+} from "../src/lib/registration";
 import { handleRegistration } from "../src/lib/checkout";
 import { getCampaignState } from "../src/lib/campaign";
 import type { CheckoutConfig } from "../src/lib/checkout-config";
@@ -62,12 +66,39 @@ test("rejects malformed applicant fields with field-specific errors", () => {
   });
   assert.equal(result.valid, false);
   if (!result.valid)
-    assert.deepEqual(Object.keys(result.fields), [
+    assert.deepEqual(Object.keys(result.fields).sort(), [
+      "email",
       "firstName",
       "lastName",
-      "email",
       "phone",
     ]);
+});
+
+test("chat contact normalizes names and mobile without requiring email", () => {
+  const result = validateContact({
+    firstName: "  سارا   آزمایشی  ",
+    lastName: "ایرانی",
+    phone: "+۹۸ (۹۰۰) ۰۰۰-۰۰۰۰",
+  });
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.data, {
+    firstName: "سارا آزمایشی",
+    lastName: "ایرانی",
+    phone: "09000000000",
+  });
+  for (const value of [
+    null,
+    [],
+    { firstName: "<script>", lastName: "", phone: "123" },
+  ]) {
+    const invalid = validateContact(value);
+    assert.equal(invalid.valid, false);
+    assert.deepEqual(Object.keys(invalid.fields).sort(), [
+      "firstName",
+      "lastName",
+      "phone",
+    ]);
+  }
 });
 
 test("names require a letter, while legitimate separators remain accepted", () => {

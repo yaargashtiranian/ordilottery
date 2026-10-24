@@ -226,6 +226,11 @@ test("live free order creates one new case with intake closed, never a forged ba
   assert.equal((await db.query(`select * from crm_payments`)).rows.length, 0);
 });
 test("visitor chat retries are idempotent and cross-conversation message ids conflict", async () => {
+  for (const owner of [guest, otherGuest])
+    await db.query(
+      "select growth_set_chat_lead($1,'مشتری','آزمایشی','09000000000')",
+      [owner],
+    );
   const id = randomUUID();
   const send = (owner: string, body = "سلام") =>
     db.query("select growth_send_message($1,$2,$3)", [owner, id, body]);

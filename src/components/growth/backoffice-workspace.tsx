@@ -11,6 +11,7 @@ import {
   type Order,
 } from "@/lib/growth/model";
 import { persianNumber, plans } from "@/lib/site";
+import { type Contact } from "@/lib/registration";
 
 type OrderRow = Order & {
   applicant: { firstName: string; lastName: string; email: string };
@@ -45,9 +46,11 @@ const date = (value: string) =>
 export function GrowthWorkspace({
   section,
   defaultMode = "simulation",
+  initialConversation = "",
 }: {
   section: "campaigns" | "chat" | "orders";
   defaultMode?: string;
+  initialConversation?: string;
 }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [stats, setStats] = useState<Stat[]>([]);
@@ -57,7 +60,10 @@ export function GrowthWorkspace({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(initialConversation);
+  const [lead, setLead] = useState<Contact | null>(null);
+  const [unreadIds, setUnreadIds] = useState<string[]>([]);
+  const acknowledged = useRef(new Set<string>());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const attempt = useRef("");
@@ -76,6 +82,7 @@ export function GrowthWorkspace({
           );
           const data = await response.json();
           if (!response.ok) throw new Error(data.error);
+          if (stopped) return;
           setRows(data.rows);
           setStats(data.stats);
           setTotal(data.total);
@@ -112,7 +119,10 @@ export function GrowthWorkspace({
           );
           const data = await response.json();
           if (!response.ok) throw new Error(data.error);
+          if (stopped) return;
           setMessages(data.messages);
+          setLead(data.lead);
+          setUnreadIds(data.unread_ids || []);
         } catch {
           if (!stopped)
             setError("دریافت پیام‌ها قطع شده؛ دوباره بررسی می‌شود.");
@@ -127,6 +137,32 @@ export function GrowthWorkspace({
       controller.abort();
     };
   }, [selected, section, revision]);
+  // Read only message IDs returned for the currently displayed conversation, independently per staff account.
+  useEffect(() => {
+    if (
+      section !== "chat" ||
+      !selected ||
+      document.visibilityState === "hidden"
+    )
+      return;
+    const ids = unreadIds.filter((id) => !acknowledged.current.has(id));
+    if (!ids.length) return;
+    ids.forEach((id) => acknowledged.current.add(id));
+    void fetch("/api/backoffice/growth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "chat_read", ids }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error();
+        window.dispatchEvent(new Event("support-notifications-refresh"));
+        setRevision((value) => value + 1);
+      })
+      .catch(() => {
+        ids.forEach((id) => acknowledged.current.delete(id));
+        setError("وضعیت خواندن پیام‌ها ذخیره نشد؛ دوباره بررسی می‌شود.");
+      });
+  }, [unreadIds, selected, section]);
   async function mutate(input: Record<string, unknown>) {
     if (lock.current) return false;
     lock.current = true;
@@ -377,15 +413,34 @@ export function GrowthWorkspace({
                     key={row.id}
                     aria-pressed={selected === row.id}
                     onClick={() => {
+                      if (
+                        draft.trim() &&
+                        !window.confirm("پاسخ ارسال‌نشده کنار گذاشته شود؟")
+                      )
+                        return;
                       setSelected(row.id);
                       setMessages([]);
+                      setLead(null);
+                      setUnreadIds([]);
                       setDraft("");
                       replyAttempt.current = "";
                     }}
                   >
                     <strong>
-                      گفت‌وگو <bdi>{row.id.slice(0, 8)}</bdi>
+                      {conversation.first_name
+                        ? `${conversation.first_name} ${conversation.last_name}`
+                        : "گفت‌وگو"}{" "}
+                      <bdi>{row.id.slice(0, 8)}</bdi>
                     </strong>
+                    {conversation.phone ? (
+                      <bdi>{conversation.phone}</bdi>
+                    ) : null}
+                    {Boolean(conversation.unread_count) ? (
+                      <span className="support-unread-label">
+                        {persianNumber(conversation.unread_count!)} پیام
+                        خوانده‌نشده
+                      </span>
+                    ) : null}
                     <span>{stateLabels[conversation.status]}</span>
                     <small>{date(conversation.updated_at)}</small>
                   </button>
@@ -434,6 +489,23 @@ export function GrowthWorkspace({
                 <h2>
                   پاسخ عمومی به مشتری <bdi>{selected.slice(0, 8)}</bdi>
                 </h2>
+                {lead ? (
+                  <div className="support-lead-card">
+                    <strong>
+                      لید پشتیبانی: {lead.firstName} {lead.lastName}
+                    </strong>
+                    <a href={`tel:${lead.phone}`}>
+                      <bdi>{lead.phone}</bdi>
+                    </a>
+                    <small>
+                      شمارهٔ اعلام‌شده توسط مخاطب؛ تأیید پیامکی انجام نشده است.
+                    </small>
+                  </div>
+                ) : (
+                  <p className="chat-disclosure">
+                    اطلاعات تماس این گفت‌وگوی قدیمی هنوز تکمیل نشده است.
+                  </p>
+                )}
                 <div
                   className="staff-chat-log"
                   role="log"

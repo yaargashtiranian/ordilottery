@@ -152,17 +152,69 @@ test("assistant works locally and human messages cross to staff and back without
   await page
     .getByRole("button", { name: "می‌خواهم با کارشناس صحبت کنم" })
     .click();
+  await expect(page.getByLabel("پیام شما", { exact: true })).toHaveCount(0);
+  const bypass = await page.request.post("/api/experience", {
+    headers: { Origin: baseURL! },
+    data: { action: "message", id: randomUUID(), body: "بدون اطلاعات تماس" },
+  });
+  expect(bypass.status()).toBe(422);
+  await page.getByLabel("نام", { exact: true }).fill("سارا");
+  await page.getByLabel("نام خانوادگی", { exact: true }).fill("آزمایشی");
+  await page.getByLabel("شماره موبایل", { exact: true }).fill("۰۹۰۰۰۰۰۰۰۰۰");
+  const leadAccessibility = await new AxeBuilder({ page })
+    .include(".chat-panel")
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(leadAccessibility.violations).toEqual([]);
+  await page.screenshot({ path: test.info().outputPath("chat-lead.png") });
+  await page.getByRole("button", { name: "شروع گفت‌وگو", exact: true }).click();
   const body = `سؤال آزمایشی ${randomUUID().slice(0, 8)}`;
   await page.getByLabel("پیام شما", { exact: true }).fill(body);
   await page.getByRole("button", { name: "ارسال پیام", exact: true }).click();
   await expect(page.getByRole("log").getByText(body)).toBeVisible();
+  await page.getByRole("button", { name: "بستن گفت‌وگو", exact: true }).click();
   const adminContext = await browser.newContext({ baseURL });
   try {
     const admin = await adminContext.newPage();
     await staff(admin);
-    await admin.goto("/backoffice/chat");
-    await admin.locator(".growth-conversation").first().click();
+    await admin.getByLabel(/اعلان‌های پشتیبانی، [1-9]/).click();
+    const bellAccessibility = await new AxeBuilder({ page: admin })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .analyze();
+    expect(bellAccessibility.violations).toEqual([]);
+    await admin.screenshot({
+      path: test.info().outputPath("staff-notifications.png"),
+    });
+    await admin
+      .locator(".support-notification-panel a")
+      .filter({ hasText: "سارا آزمایشی" })
+      .first()
+      .click();
+    await expect(admin).toHaveURL(/\/backoffice\/chat\?conversation=/);
     await expect(admin.getByRole("log").getByText(body)).toBeVisible();
+    await expect(admin.locator(".support-lead-card")).toContainText(
+      "سارا آزمایشی",
+    );
+    await expect(admin.locator(".support-lead-card a")).toHaveAttribute(
+      "href",
+      "tel:09000000000",
+    );
+    await admin.screenshot({
+      path: test.info().outputPath("staff-chat-lead.png"),
+    });
+    await expect
+      .poll(async () =>
+        Number(
+          (
+            await (
+              await admin.request.get(
+                "/api/backoffice/growth?section=notifications",
+              )
+            ).json()
+          ).total,
+        ),
+      )
+      .toBe(0);
     await admin
       .getByLabel("متن پاسخ به مشتری")
       .fill("سلام، برای اسکن مدارک راهنمایی‌تان می‌کنیم.");
@@ -170,10 +222,43 @@ test("assistant works locally and human messages cross to staff and back without
       .getByRole("button", { name: "ارسال پاسخ", exact: true })
       .click();
     await expect(
+      page.getByRole("button", { name: /گفت‌وگو، 1 پاسخ خوانده‌نشده/ }),
+    ).toBeVisible({ timeout: 15000 });
+    await page.screenshot({
+      path: test.info().outputPath("customer-notification.png"),
+    });
+    await page.reload();
+    await page
+      .getByRole("button", { name: /گفت‌وگو، 1 پاسخ خوانده‌نشده/ })
+      .click();
+    await expect(
       page
         .getByRole("log")
         .getByText("سلام، برای اسکن مدارک راهنمایی‌تان می‌کنیم."),
     ).toBeVisible({ timeout: 12000 });
+    await expect
+      .poll(async () =>
+        Number(
+          (
+            await (
+              await page.request.get("/api/experience?notifications=1")
+            ).json()
+          ).unread_count,
+        ),
+      )
+      .toBe(0);
+    const stranger = await browser.newContext({ baseURL });
+    try {
+      const response = await stranger.request.get(
+        "/api/experience?notifications=1",
+      );
+      expect(await response.json()).toEqual({
+        unread_count: 0,
+        conversation: null,
+      });
+    } finally {
+      await stranger.close();
+    }
     const accessibility = await new AxeBuilder({ page: admin })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();

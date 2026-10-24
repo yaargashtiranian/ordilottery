@@ -19,32 +19,30 @@ export function normalizeDigits(value: string) {
     .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
 }
 
-/** This four-field contract is shared by the browser and the authoritative API. */
-export function validateRegistration(value: unknown): ValidationResult {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    return { valid: false, fields: {}, message: "اطلاعات فرم معتبر نیست." };
-  const input = value as Record<string, unknown>;
+export type Contact = Pick<Applicant, "firstName" | "lastName" | "phone">;
+
+/** Chat and registration share normalization; a chat lead never requires an invented email. */
+export function validateContact(value: unknown) {
+  const input =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
   const string = (key: string) =>
-    typeof input[key] === "string" ? (input[key] as string).trim() : "";
-  const data = {
+    typeof input[key] === "string" ? input[key].trim() : "";
+  const data: Contact = {
     firstName: string("firstName").replace(/\s+/g, " "),
     lastName: string("lastName").replace(/\s+/g, " "),
-    email: string("email"),
     phone: normalizeDigits(string("phone"))
       .replace(/[\s()-]/g, "")
       .replace(/^(?:\+98|0098)/, "0"),
-    plan: string("plan") as PlanId,
-    idempotencyKey: string("idempotencyKey"),
   };
   const fields: FieldErrors = {};
-  // Unicode letters accommodate Persian and international names without accepting markup.
   const namePattern = /^[\p{L}\p{M}\s\u200c'’.-]+$/u;
   for (const field of ["firstName", "lastName"] as const) {
     if (
       data[field].length < 2 ||
       data[field].length > 80 ||
       !namePattern.test(data[field]) ||
-      // Separators and combining marks are allowed only alongside a real letter.
       !/\p{L}/u.test(data[field])
     )
       fields[field] =
@@ -52,10 +50,28 @@ export function validateRegistration(value: unknown): ValidationResult {
           ? "نام را با ۲ تا ۸۰ حرف وارد کنید."
           : "نام خانوادگی را با ۲ تا ۸۰ حرف وارد کنید.";
   }
-  if (data.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email))
-    fields.email = "یک آدرس ایمیل معتبر وارد کنید.";
   if (!/^09\d{9}$/.test(data.phone))
     fields.phone = "شماره موبایل ایران را با ۱۱ رقم وارد کنید.";
+  return { valid: Object.keys(fields).length === 0, data, fields };
+}
+
+/** This four-field contract is shared by the browser and the authoritative API. */
+export function validateRegistration(value: unknown): ValidationResult {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    return { valid: false, fields: {}, message: "اطلاعات فرم معتبر نیست." };
+  const input = value as Record<string, unknown>;
+  const string = (key: string) =>
+    typeof input[key] === "string" ? (input[key] as string).trim() : "";
+  const contact = validateContact(input);
+  const data = {
+    ...contact.data,
+    email: string("email"),
+    plan: string("plan") as PlanId,
+    idempotencyKey: string("idempotencyKey"),
+  };
+  const fields: FieldErrors = { ...contact.fields };
+  if (data.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email))
+    fields.email = "یک آدرس ایمیل معتبر وارد کنید.";
   if (Object.keys(fields).length)
     return {
       valid: false,

@@ -53,6 +53,7 @@ async function main() {
     "growth_orders",
     "growth_conversations",
     "growth_messages",
+    "growth_chat_inbox",
     "cms_pages",
     "cms_editors",
   ]);
@@ -63,6 +64,12 @@ async function main() {
     "growth_send_message",
     "growth_staff_reply",
     "growth_campaign_stats",
+    "growth_set_chat_lead",
+    "growth_visitor_chat",
+    "growth_visitor_read",
+    "growth_staff_read",
+    "growth_staff_chat",
+    "growth_staff_notifications",
   ]);
   const identifier = (value: string) => {
     if (!/^[a-z_][a-z0-9_]*$/.test(value))

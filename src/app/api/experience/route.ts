@@ -3,7 +3,7 @@ import {
   isBackofficeOrigin,
   readBackofficeBody,
 } from "@/lib/backoffice-request";
-import { validateRegistration } from "@/lib/registration";
+import { validateRegistration, validateContact } from "@/lib/registration";
 import { isUuid } from "@/lib/operations-model";
 import { couponCode, type Order } from "@/lib/growth/model";
 import {
@@ -27,6 +27,8 @@ export async function GET(request: Request) {
   try {
     const guest = await guestSession();
     if (!guest) {
+      if (new URL(request.url).searchParams.get("notifications") === "1")
+        return json({ unread_count: 0, conversation: null });
       // A first visit has nothing to resume; this optional check is not a failed login.
       if (new URL(request.url).searchParams.get("resume") === "1")
         return json({ order: null });
@@ -61,22 +63,12 @@ export async function GET(request: Request) {
         ? json({ order: data })
         : json({ error: "این سفارش در این مرورگر در دسترس نیست." }, 404);
     }
-    const { data: conversation, error } = await db
-      .from("growth_conversations")
-      .select("id,status,updated_at")
-      .eq("guest_hash", guest)
-      .maybeSingle();
+    const { data, error } = await db.rpc("growth_visitor_chat", {
+      p_guest: guest,
+      p_messages: url.searchParams.get("notifications") !== "1",
+    });
     if (error) databaseError();
-    if (!conversation) return json({ conversation: null, messages: [] });
-    const { data: messages, error: messageError } = await db
-      .from("growth_messages")
-      .select("id,sender,body,created_at")
-      .eq("conversation_id", conversation.id)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(100);
-    if (messageError) databaseError();
-    return json({ conversation, messages: messages!.reverse() });
+    return json(data);
   } catch (error) {
     return failure(error);
   }
@@ -93,6 +85,42 @@ export async function POST(request: Request) {
     const guest = (await guestSession(true))!;
     await limit(`write:${guest}`, 25);
     const db = growthClient();
+    if (input.action === "chat_lead") {
+      const result = validateContact(input.lead);
+      if (!result.valid)
+        return json(
+          { error: "اطلاعات تماس را کامل کنید.", fields: result.fields },
+          422,
+        );
+      if (input.consent !== true)
+        return json(
+          { error: "برای شروع، ذخیره اطلاعات تماس را بپذیرید." },
+          422,
+        );
+      const { data, error } = await db.rpc("growth_set_chat_lead", {
+        p_guest: guest,
+        p_first_name: result.data.firstName,
+        p_last_name: result.data.lastName,
+        p_phone: result.data.phone,
+      });
+      if (error) databaseError(error.message);
+      return json({ lead: data });
+    }
+    if (input.action === "chat_read" || input.action === "chat_read_all") {
+      if (
+        !Array.isArray(input.ids) ||
+        input.ids.length > 100 ||
+        !input.ids.every(isUuid)
+      )
+        return json({ error: "شناسه اعلان معتبر نیست." }, 422);
+      const { data, error } = await db.rpc("growth_visitor_read", {
+        p_guest: guest,
+        p_ids: input.ids,
+        p_all: input.action === "chat_read_all",
+      });
+      if (error) databaseError(error.message);
+      return json({ unread_count: data });
+    }
     if (input.action === "message") {
       if (
         !isUuid(input.id) ||

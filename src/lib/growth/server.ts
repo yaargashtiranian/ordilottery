@@ -89,6 +89,11 @@ export async function limit(key: string, max: number, seconds = 60) {
 
 /** Database internals and applicant values never escape in public errors. */
 export function databaseError(message?: string): never {
+  if (message?.includes("CHAT_LEAD_REQUIRED"))
+    throw new GrowthError(
+      "قبل از ارسال پیام، نام و شماره تماس را ثبت کنید.",
+      422,
+    );
   if (message?.includes("PRICE_CHANGED"))
     throw new GrowthError(
       "قیمت تغییر کرده؛ دوباره خلاصه سفارش را بررسی کنید.",

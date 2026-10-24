@@ -39,12 +39,17 @@ export type ChatMessage = {
   sender: "visitor" | "staff";
   body: string;
   created_at: string;
+  visitor_read_at?: string | null;
 };
 export type Conversation = {
   id: string;
   status: "waiting" | "replied" | "closed";
   updated_at: string;
   created_at: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  unread_count?: number;
 };
 
 /** Coupon codes are ASCII, normalized once on both sides; no customer identity is encoded. */

@@ -20,6 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SupportNotifications } from "@/components/growth/support-notifications";
 
 const navigation = [
   {
@@ -215,10 +216,13 @@ export function BackofficeShell({
             <ChevronLeft size={14} />
             <strong>{title}</strong>
           </div>
-          <span className="ops-private">
-            <ShieldCheck size={14} />
-            دسترسی مدیریت
-          </span>
+          <div className="bo-topbar-tools">
+            <SupportNotifications />
+            <span className="ops-private">
+              <ShieldCheck size={14} />
+              دسترسی مدیریت
+            </span>
+          </div>
         </header>
         {error ? (
           <div className="bo-error-banner" role="alert">

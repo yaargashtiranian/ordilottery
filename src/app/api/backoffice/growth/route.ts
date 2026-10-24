@@ -16,20 +16,21 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const section = url.searchParams.get("section");
     const id = url.searchParams.get("id");
+    if (section === "notifications") {
+      const result = await client.rpc("growth_staff_notifications");
+      if (result.error) throw new Error();
+      return json(result.data);
+    }
     const page = Math.floor(
       Math.min(10000, Math.max(1, Number(url.searchParams.get("page")) || 1)),
     );
     if (section === "chat" && id) {
       if (!isUuid(id)) return json({ error: "شناسه نامعتبر است." }, 422);
-      const result = await client
-        .from("growth_messages")
-        .select("id,sender,body,created_at")
-        .eq("conversation_id", id)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(100);
+      const result = await client.rpc("growth_staff_chat", {
+        p_conversation: id,
+      });
       if (result.error) throw new Error();
-      return json({ messages: result.data.reverse() });
+      return json(result.data);
     }
     const table =
       section === "campaigns"
@@ -37,14 +38,14 @@ export async function GET(request: Request) {
         : section === "orders"
           ? "growth_orders"
           : section === "chat"
-            ? "growth_conversations"
+            ? "growth_chat_inbox"
             : null;
     if (!table) return json({ error: "بخش نامعتبر است." }, 422);
     const fields =
       section === "orders"
         ? "id,plan,mode,campaign_id,base_amount,discount_amount,total_amount,status,payment_kind,provider_ref,case_id,created_at,applicant"
         : section === "chat"
-          ? "id,status,created_at,updated_at"
+          ? "id,status,created_at,updated_at,first_name,last_name,phone,unread_count"
           : "*";
     const result = await client
       .from(table)
@@ -87,7 +88,21 @@ export async function POST(request: Request) {
     const session = await getBackofficeSession();
     if (!session) return json({ error: "ورود مدیریت لازم است." }, 401);
     let result;
-    if (input.action === "campaign") {
+    if (
+      input.action === "chat_read" ||
+      input.action === "notifications_read_all"
+    ) {
+      if (
+        input.action === "chat_read" &&
+        (!Array.isArray(input.ids) ||
+          input.ids.length > 100 ||
+          !input.ids.every(isUuid))
+      )
+        return json({ error: "شناسه اعلان معتبر نیست." }, 422);
+      result = await session.client.rpc("growth_staff_read", {
+        p_ids: input.action === "notifications_read_all" ? null : input.ids,
+      });
+    } else if (input.action === "campaign") {
       let data;
       try {
         data = validateCampaign(input);

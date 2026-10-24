@@ -665,3 +665,197 @@
   text-decoration: underline;
   margin-top: 10px;
 }
+
+/* Support controls share the site's RTL layout and keep private message bodies out of toasts. */
+.chat-lead-form {
+  display: grid;
+  gap: 12px;
+  padding: 8px 18px 18px;
+}
+.chat-lead-form h3 {
+  font-size: 15px;
+  font-weight: 750;
+}
+.chat-lead-form > p {
+  font-size: 12px;
+  line-height: 1.9;
+}
+.chat-lead-form label {
+  display: block;
+  margin-bottom: 6px;
+}
+.chat-lead-form input {
+  background: white;
+}
+.chat-contact-summary {
+  padding: 4px 18px 10px;
+  font-size: 12px;
+}
+.chat-read-all {
+  margin: 0 16px 10px;
+  text-decoration: underline;
+  font-size: 11px;
+  text-align: start;
+}
+.chat-unread-badge,
+.support-notifications summary b,
+.support-unread-label {
+  background: #9d3129;
+  color: white;
+  border-radius: 99px;
+  padding: 2px 7px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.chat-unread-badge {
+  position: absolute;
+  top: -8px;
+  inset-inline-end: -4px;
+  border: 2px solid white;
+}
+.chat-reply-notice,
+.support-message-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #bfd2c5;
+  border-radius: 15px;
+  background: #fff;
+  color: #194b37;
+  box-shadow: 0 10px 35px #102b1826;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.chat-reply-notice {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  width: 320px;
+  max-width: calc(100vw - 30px);
+}
+.chat-reply-notice > button:first-of-type,
+.support-message-toast a {
+  flex: 1;
+  text-align: start;
+}
+.chat-reply-notice > button:last-of-type,
+.support-message-toast button {
+  padding: 6px;
+}
+.bo-topbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.support-notifications {
+  position: relative;
+}
+.support-notifications summary {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 40px;
+  height: 40px;
+  border: 1px solid #c8d8cd;
+  border-radius: 12px;
+  background: #fff;
+  color: #194b37;
+  list-style: none;
+}
+.support-notifications summary::-webkit-details-marker {
+  display: none;
+}
+.support-notification-panel {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 10px);
+  inset-inline-end: 0;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  max-height: min(540px, 75dvh);
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #c8d8cd;
+  border-radius: 15px;
+  box-shadow: 0 12px 40px #102b1826;
+  padding: 15px;
+  color: #244b37;
+}
+.support-notification-panel header {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.support-notification-panel header span,
+.support-notification-panel p,
+.support-notification-panel small {
+  font-size: 11px;
+  line-height: 1.9;
+}
+.support-notification-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+.support-notification-panel li a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 5px;
+  border-bottom: 1px solid #e1eae4;
+  font-size: 12px;
+}
+.support-notification-panel li a:hover {
+  background: #f2f7f3;
+}
+.support-notification-panel li small {
+  display: block;
+}
+.support-notification-panel > button {
+  height: auto;
+  white-space: normal;
+  text-align: start;
+}
+.support-message-toast {
+  position: fixed;
+  z-index: 110;
+  inset-inline-end: 22px;
+  bottom: 22px;
+  max-width: calc(100vw - 32px);
+  width: 350px;
+}
+.support-lead-card {
+  display: grid;
+  gap: 6px;
+  background: #f0f6f1;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #c8d8cd;
+  font-size: 14px;
+}
+.support-lead-card a {
+  width: fit-content;
+  text-decoration: underline;
+}
+.support-lead-card small {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #536459;
+}
+.support-notifications summary:focus-visible,
+.support-notifications a:focus-visible,
+.chat-reply-notice button:focus-visible,
+.chat-read-all:focus-visible {
+  outline: 3px solid #b26421;
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .bo-topbar-tools {
+    gap: 8px;
+  }
+  .bo-topbar-tools .ops-private {
+    display: none;
+  }
+}

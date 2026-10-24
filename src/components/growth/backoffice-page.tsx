@@ -12,8 +12,10 @@ const titles = {
 /** Keep authorization in the server page as well as every API; an unavailable binding never leaks data. */
 export async function GrowthPage({
   section,
+  initialConversation = "",
 }: {
   section: keyof typeof titles;
+  initialConversation?: string;
 }) {
   let session;
   try {
@@ -40,6 +42,7 @@ export async function GrowthPage({
     >
       <GrowthWorkspace
         section={section}
+        initialConversation={initialConversation}
         defaultMode={
           commerceMode() === "disabled" ? "simulation" : commerceMode()
         }
