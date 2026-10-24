@@ -1,6 +1,6 @@
 import "server-only";
 import { createBackofficeClient } from "./backoffice-auth";
-import { isTestLoginEmail } from "./customer-verification";
+import { isInternalPhoneEmail } from "./customer-verification";
 import { guestSession, growthClient, databaseError } from "./growth/server";
 
 /** Only a genuine Supabase-confirmed email can finish an email challenge; phone test checks never call this. */
@@ -20,7 +20,7 @@ export async function finishEmailCheck() {
   if (
     error ||
     !user?.email_confirmed_at ||
-    isTestLoginEmail(user.email) ||
+    isInternalPhoneEmail(user.email) ||
     user.email?.toLowerCase() !== check.profile.email
   )
     return false;

@@ -7,19 +7,20 @@ import { PortalEmail } from "@/components/portal-email";
 import { CaseDocuments } from "@/components/documents/case-documents";
 import { PortalSignOut } from "@/components/documents/portal-signout";
 import { documentSession } from "@/lib/documents-server";
-import { isTestLoginEmail } from "@/lib/customer-verification";
+import { isInternalPhoneEmail } from "@/lib/customer-verification";
 
 /** Only the invitation projection is read here; customers never receive internal case notes. */
 export default async function PortalPage() {
   // Missing cloud bindings still render the useful login screen rather than a server exception.
   const session = await documentSession().catch(() => null);
-  // Reserved mock logins are denied both by documentSession and restrictive database/storage policies.
+  // Internal phone logins are not proof of an email, including after real SMS confirmation.
   if (!session) {
     const client = await createBackofficeClient().catch(() => null);
     const user = client ? (await client.auth.getUser()).data.user : null;
     if (
-      user?.app_metadata.identity_assurance === "test_phone" &&
-      isTestLoginEmail(user.email)
+      user &&
+      ["test_phone", "phone"].includes(user.app_metadata.identity_assurance) &&
+      isInternalPhoneEmail(user.email)
     )
       return (
         <main className="docs-portal">
@@ -33,7 +34,9 @@ export default async function PortalPage() {
             </div>
             <PortalSignOut />
           </header>
-          <p className="simulation-banner">حساب آزمایشی موبایل</p>
+          {user.app_metadata.identity_assurance === "test_phone" && (
+            <p className="simulation-banner">حساب آزمایشی موبایل</p>
+          )}
           <p>برای دسترسی به مدارک، ایمیل پرونده را تأیید کنید.</p>
           <PortalEmail initialEmail={user.user_metadata.claimed_email || ""} />
           <Link href="/#registration">ثبت سفارش</Link>

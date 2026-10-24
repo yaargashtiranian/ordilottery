@@ -20,6 +20,8 @@ export function PortalAuth() {
     phone: "",
   });
   const [testPhone, setTestPhone] = useState(false),
+    [phone, setPhone] = useState(false),
+    [phoneVerified, setPhoneVerified] = useState(false),
     [method, setMethod] = useState("email"),
     [challenge, setChallenge] = useState(""),
     [code, setCode] = useState("");
@@ -34,7 +36,10 @@ export function PortalAuth() {
     })
       .then((r) => r.json())
       .then((data) => {
-        if (!controller.signal.aborted) setTestPhone(data.testPhone === true);
+        if (!controller.signal.aborted) {
+          setTestPhone(data.testPhone === true);
+          setPhone(data.phone === true);
+        }
       })
       .catch(() => {});
     return () => controller.abort();
@@ -49,18 +54,21 @@ export function PortalAuth() {
       const normalized = register ? customerProfile(profile) : null;
       if (register && !normalized)
         throw new Error("نام، ایمیل و موبایل را بررسی کنید.");
-      if (register && method === "test_phone") {
+      if (register && (method === "test_phone" || method === "mobile")) {
         if (!challenge) {
           const data = await verifyCustomer({
             action: "start",
             profile: normalized,
-            channel: "test_phone",
+            channel: method,
           });
           setProfile(normalized!);
           setChallenge(data.challenge);
           return;
         }
-        await verifyCustomer({ action: "confirm", challenge, code });
+        if (!phoneVerified) {
+          await verifyCustomer({ action: "confirm", challenge, code });
+          setPhoneVerified(true);
+        }
       }
       const response = await fetch("/api/portal/session", {
         method: "POST",
@@ -93,6 +101,7 @@ export function PortalAuth() {
   function reset() {
     setRegister(!register);
     setChallenge("");
+    setPhoneVerified(false);
     setCode("");
     setPassword("");
     setMessage("");
@@ -187,20 +196,33 @@ export function PortalAuth() {
               موبایل (آزمایشی)
             </Label>
           ) : null}
+          {phone && (
+            <Label>
+              <input
+                type="radio"
+                name="verification-method"
+                checked={method === "mobile"}
+                onChange={() => setMethod("mobile")}
+              />
+              موبایل
+            </Label>
+          )}
         </fieldset>
       ) : null}
       {challenge ? (
         <div>
-          <p>
-            کد آزمایشی: <bdi>123456</bdi>
-          </p>
+          {method === "test_phone" ? (
+            <p>
+              کد آزمایشی: <bdi>123456</bdi>
+            </p>
+          ) : null}
           <Label htmlFor="portal-code">کد تأیید</Label>
           <Input
             id="portal-code"
             inputMode="numeric"
             autoComplete="one-time-code"
             dir="ltr"
-            maxLength={6}
+            maxLength={method === "mobile" ? 10 : 6}
             value={code}
             disabled={busy}
             onChange={(event) => setCode(event.target.value)}
@@ -211,11 +233,43 @@ export function PortalAuth() {
             disabled={busy}
             onClick={() => {
               setChallenge("");
+              setPhoneVerified(false);
               setCode("");
             }}
           >
             ویرایش اطلاعات
           </Button>
+          {method === "mobile" && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setMessage("");
+                setFailed(false);
+                try {
+                  const result = await verifyCustomer({
+                    action: "start",
+                    profile,
+                    channel: "mobile",
+                  });
+                  setChallenge(result.challenge);
+                  setPhoneVerified(false);
+                  setCode("");
+                } catch (error) {
+                  setFailed(true);
+                  setMessage(
+                    error instanceof Error ? error.message : "ارسال انجام نشد.",
+                  );
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              ارسال دوباره
+            </Button>
+          )}
         </div>
       ) : null}
       {message ? (
@@ -228,7 +282,14 @@ export function PortalAuth() {
       ) : null}
       <Button
         type="submit"
-        disabled={busy || (Boolean(challenge) && code.length !== 6)}
+        disabled={
+          busy ||
+          (Boolean(challenge) &&
+            !phoneVerified &&
+            (method === "mobile"
+              ? !/^[0-9۰-۹٠-٩]{4,10}$/.test(code)
+              : code.length !== 6))
+        }
       >
         {busy
           ? "در حال بررسی…"

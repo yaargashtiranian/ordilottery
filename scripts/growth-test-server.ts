@@ -109,6 +109,10 @@ async function main() {
     "growth_identity_current",
     "growth_identity_attempt",
     "growth_test_login",
+    "growth_mobile_start",
+    "growth_mobile_finish",
+    "growth_mobile_verify",
+    "growth_mobile_registration_claim",
   ]);
   const identifier = (value: string) => {
     if (!/^[a-z_][a-z0-9_]*$/.test(value))
@@ -171,8 +175,15 @@ async function main() {
         });
         sessions.set(nextToken, profile);
         await db.query(
-          "insert into auth.users(id,phone,email,email_confirmed_at,raw_app_meta_data) values($1,$2,$3,now(),$4)",
-          [id, phone, input.email, input.app_metadata],
+          "insert into auth.users(id,phone,email,email_confirmed_at,raw_app_meta_data,phone_confirmed_at) values($1,$2,$3,$4,$5,$6)",
+          [
+            id,
+            phone,
+            input.email,
+            profile.email_confirmed_at ?? null,
+            input.app_metadata,
+            profile.phone_confirmed_at ?? null,
+          ],
         );
         return send(profile);
       }

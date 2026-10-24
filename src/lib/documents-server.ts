@@ -14,7 +14,7 @@ import {
   encryptDocument,
 } from "@/lib/documents-crypto";
 import { isUuid } from "@/lib/operations-model";
-import { isTestLoginEmail } from "./customer-verification";
+import { isInternalPhoneEmail } from "./customer-verification";
 import {
   backofficeJson,
   isBackofficeOrigin,
@@ -37,7 +37,7 @@ export async function documentSession() {
     error ||
     !user?.email ||
     !user.email_confirmed_at ||
-    isTestLoginEmail(user.email)
+    isInternalPhoneEmail(user.email)
   )
     return null;
   const { data, error: membershipError } = await client

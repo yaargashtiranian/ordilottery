@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 /** Use the cloud browser when present; standard Playwright installs work elsewhere. */
 export default defineConfig({
   testDir: "tests/browser",
-  testIgnore: /growth\.spec\.ts/,
+  testIgnore: /(?:growth|otp)\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
@@ -38,6 +38,9 @@ export default defineConfig({
     reuseExistingServer: false,
     env: {
       SUPABASE_SECRET_KEY: "",
+      ENABLE_MELIPAYAMAK_OTP: "false",
+      MELIPAYAMAK_OTP_TOKEN: "",
+      OTP_HASH_SECRET: "",
       ENABLE_TEST_OTP: "false",
       SUPABASE_URL: "http://127.0.0.1:9",
       SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_test_only",

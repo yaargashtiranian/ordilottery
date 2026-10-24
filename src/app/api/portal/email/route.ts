@@ -5,7 +5,7 @@ import {
   backofficeJson as json,
 } from "@/lib/backoffice-request";
 import { guestSession, limit } from "@/lib/growth/server";
-import { isTestLoginEmail } from "@/lib/customer-verification";
+import { isInternalPhoneEmail } from "@/lib/customer-verification";
 
 /** A real magic link establishes a separate email-proven identity; no alias credential is transferred to it. */
 export async function POST(request: Request) {
@@ -25,8 +25,8 @@ export async function POST(request: Request) {
     if (
       error ||
       !user ||
-      !isTestLoginEmail(user.email) ||
-      user.app_metadata.identity_assurance !== "test_phone"
+      !isInternalPhoneEmail(user.email) ||
+      !["test_phone", "phone"].includes(user.app_metadata.identity_assurance)
     )
       return json({ error: "ابتدا وارد حساب شوید." }, 401);
     const guest = (await guestSession(true))!;

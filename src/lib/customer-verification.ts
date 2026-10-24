@@ -18,6 +18,13 @@ export function iranPhone(value: string) {
 export function isTestLoginEmail(value: unknown) {
   return typeof value === "string" && value.endsWith("@local-otp.invalid");
 }
+/** A phone-proven internal login is never proof of the customer's claimed email. */
+export function isInternalPhoneEmail(value: unknown) {
+  return (
+    isTestLoginEmail(value) ||
+    (typeof value === "string" && value.endsWith("@phone-login.invalid"))
+  );
+}
 /** Phone logins use the same normalization as intake; an address is never interpreted as a phone. */
 export function customerIdentifier(value: unknown) {
   if (typeof value !== "string") return null;
@@ -39,6 +46,7 @@ export function testOtpAllowed(
     const url = new URL(origin);
     return (
       env.ENABLE_TEST_OTP === "true" &&
+      env.ENABLE_MELIPAYAMAK_OTP !== "true" &&
       ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) &&
       (env.NODE_ENV !== "production" || env.BACKOFFICE_LOCAL_HTTP === "true")
     );

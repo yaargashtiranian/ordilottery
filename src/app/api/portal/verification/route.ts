@@ -18,6 +18,11 @@ import {
   databaseError,
 } from "@/lib/growth/server";
 import { isUuid } from "@/lib/operations-model";
+import { otpConfig } from "@/lib/melipayamak-otp";
+import {
+  startMobileCheck,
+  confirmMobileCheck,
+} from "@/lib/mobile-verification-server";
 export const dynamic = "force-dynamic";
 
 /** Same-browser recovery after a real email link contains no password and cannot expose another person's profile. */
@@ -27,20 +32,21 @@ export async function GET(request: Request) {
       process.env.SITE_URL || `http://${request.headers.get("host")}`,
     );
     const guest = await guestSession();
-    if (!guest) return json({ check: null, testPhone });
+    const phone = Boolean(otpConfig());
+    if (!guest) return json({ check: null, testPhone, phone });
     await limit(`identity-read:${guest}`, 30);
     await finishEmailCheck();
     const result = await growthClient().rpc("growth_identity_current", {
       p_guest: guest,
     });
     if (result.error) databaseError();
-    return json({ check: result.data, testPhone });
+    return json({ check: result.data, testPhone, phone });
   } catch {
     return json({ error: "دریافت وضعیت تأیید انجام نشد." }, 503);
   }
 }
 
-/** Fixed phone verification never confirms an email or returns an Auth token. */
+/** Contact proof remains scoped to this browser/profile; a phone code never confirms a claimed email. */
 export async function POST(request: Request) {
   if (!isBackofficeOrigin(request))
     return json({ error: "مبدأ نامعتبر است." }, 403);
@@ -51,6 +57,22 @@ export async function POST(request: Request) {
     await limit(`identity-write:${guest}`, 20);
     const db = growthClient();
     if (input.action === "confirm") {
+      if (!isUuid(input.challenge))
+        return json({ error: "شناسه تأیید معتبر نیست." }, 422);
+      const current = await db.rpc("growth_identity_current", {
+        p_guest: guest,
+      });
+      if (current.error) databaseError();
+      if (current.data?.channel === "mobile") {
+        const verified = await confirmMobileCheck(
+          guest,
+          input.challenge,
+          input.code,
+        );
+        return verified
+          ? json({ verified: true, method: "mobile" })
+          : json({ error: "کد نادرست، مصرف‌شده یا منقضی است." }, 422);
+      }
       if (
         !testOtpAllowed(request.headers.get("origin")!) ||
         !isUuid(input.challenge)
@@ -80,7 +102,7 @@ export async function POST(request: Request) {
     }
     if (
       input.action !== "start" ||
-      !["email", "test_phone"].includes(String(input.channel))
+      !["email", "test_phone", "mobile"].includes(String(input.channel))
     )
       return json({ error: "روش تأیید نامعتبر است." }, 422);
     if (
@@ -89,6 +111,10 @@ export async function POST(request: Request) {
     )
       return json({ error: "تأیید آزمایشی در دسترس نیست." }, 403);
     await limit(`identity-start:${guest}`, 5, 600);
+    if (input.channel === "mobile") {
+      const challenge = await startMobileCheck(guest, profile);
+      return json({ challenge, channel: "mobile" });
+    }
     const result = await db.rpc("growth_identity_start", {
       p_guest: guest,
       p_profile: profile,

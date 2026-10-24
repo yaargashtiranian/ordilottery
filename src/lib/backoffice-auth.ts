@@ -1,7 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { isTestLoginEmail } from "./customer-verification";
+import { isInternalPhoneEmail } from "./customer-verification";
 import { type StaffAccess, hasStaffAccess } from "./backoffice-permissions";
 
 /** Tokens live in HTTP-only cookies; authenticated RLS remains the write authority. */
@@ -53,7 +53,7 @@ export async function getBackofficeSession(section?: string) {
     error ||
     !user?.email ||
     !user.email_confirmed_at ||
-    isTestLoginEmail(user.email)
+    isInternalPhoneEmail(user.email)
   )
     return null;
   const { data: editor, error: editorError } = await client

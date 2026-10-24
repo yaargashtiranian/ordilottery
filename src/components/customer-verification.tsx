@@ -29,6 +29,7 @@ export function CustomerVerification({
   onBack: () => void;
 }) {
   const [testPhone, setTestPhone] = useState(false),
+    [phone, setPhone] = useState(false),
     [challenge, setChallenge] = useState(""),
     [channel, setChannel] = useState("");
   const [code, setCode] = useState(""),
@@ -42,12 +43,18 @@ export function CustomerVerification({
       cache: "no-store",
     })
       .then((r) => r.json())
-      .then((data) => setTestPhone(data.testPhone === true))
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setTestPhone(data.testPhone === true);
+          setPhone(data.phone === true);
+        }
+      })
       .catch(() => {});
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    if (channel === "test_phone") codeInput.current?.focus();
+    if (channel === "test_phone" || channel === "mobile")
+      codeInput.current?.focus();
   }, [channel]);
   async function start(next: string) {
     setBusy(true);
@@ -71,7 +78,7 @@ export function CustomerVerification({
     setBusy(true);
     setError("");
     try {
-      if (channel === "test_phone")
+      if (channel === "test_phone" || channel === "mobile")
         await verifyCustomer({ action: "confirm", challenge, code });
       else {
         const response = await fetch("/api/portal/verification", {
@@ -121,13 +128,25 @@ export function CustomerVerification({
                 تأیید موبایل (آزمایشی)
               </Button>
             ) : null}
+            {phone && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => void start("mobile")}
+              >
+                تأیید با پیامک
+              </Button>
+            )}
           </div>
         </>
-      ) : channel === "test_phone" ? (
+      ) : channel === "test_phone" || channel === "mobile" ? (
         <>
-          <p>
-            کد آزمایشی: <bdi>123456</bdi>
-          </p>
+          {channel === "test_phone" ? (
+            <p>
+              کد آزمایشی: <bdi>123456</bdi>
+            </p>
+          ) : null}
           <Label htmlFor="customer-check-code">کد تأیید</Label>
           <Input
             ref={codeInput}
@@ -135,7 +154,7 @@ export function CustomerVerification({
             autoComplete="one-time-code"
             inputMode="numeric"
             dir="ltr"
-            maxLength={6}
+            maxLength={channel === "mobile" ? 10 : 6}
             value={code}
             disabled={busy}
             onChange={(event) => setCode(event.target.value)}
@@ -148,11 +167,26 @@ export function CustomerVerification({
           />
           <Button
             type="button"
-            disabled={busy || code.length !== 6}
+            disabled={
+              busy ||
+              (channel === "mobile"
+                ? !/^[0-9۰-۹٠-٩]{4,10}$/.test(code)
+                : code.length !== 6)
+            }
             onClick={() => void confirm()}
           >
             تأیید و ادامه
           </Button>
+          {channel === "mobile" && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => void start("mobile")}
+            >
+              ارسال دوباره
+            </Button>
+          )}
         </>
       ) : (
         <>

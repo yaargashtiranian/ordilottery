@@ -5,6 +5,7 @@ import {
   iranPhone,
   testOtpAllowed,
   isTestLoginEmail,
+  isInternalPhoneEmail,
 } from "@/lib/customer-verification";
 import {
   guestSession,
@@ -40,8 +41,9 @@ export async function POST(request: Request) {
       const profile = customerProfile(input);
       if (!profile)
         return backofficeJson({ error: "اطلاعات تماس را کامل کنید." }, 422);
-      if (input.method === "test_phone") {
-        if (!testOtpAllowed(request.headers.get("origin")!))
+      if (input.method === "test_phone" || input.method === "mobile") {
+        const realPhone = input.method === "mobile";
+        if (!realPhone && !testOtpAllowed(request.headers.get("origin")!))
           return backofficeJson({ error: "تأیید آزمایشی در دسترس نیست." }, 403);
         const db = growthClient();
         const check = await db.rpc("growth_identity_current", {
@@ -50,7 +52,7 @@ export async function POST(request: Request) {
         if (check.error) databaseError();
         if (
           !check.data?.verified ||
-          check.data.method !== "test_phone" ||
+          check.data.method !== input.method ||
           check.data.profile.email !== profile.email ||
           check.data.profile.phone !== profile.phone
         )
@@ -70,16 +72,33 @@ export async function POST(request: Request) {
             { error: "این حساب قبلاً ساخته شده است؛ وارد شوید." },
             409,
           );
-        // Phone provider is disconnected: a random reserved login keeps Supabase password/session handling intact.
+        if (realPhone) {
+          const claim = await db.rpc("growth_mobile_registration_claim", {
+            p_guest: guest,
+            p_email: profile.email,
+            p_phone: profile.phone,
+          });
+          if (claim.error) databaseError();
+          if (!claim.data)
+            return backofficeJson(
+              { error: "برای ساخت حساب، دوباره موبایل را تأیید کنید." },
+              422,
+            );
+        }
+        // Hosted Phone Auth is disabled; a reserved login preserves native Supabase passwords/sessions.
         // The claimed customer email is never attached or confirmed; restrictive document RLS rejects the alias.
-        const loginEmail = `mock-${crypto.randomUUID()}@local-otp.invalid`;
+        const loginEmail = realPhone
+          ? `phone-${crypto.randomUUID()}@phone-login.invalid`
+          : `mock-${crypto.randomUUID()}@local-otp.invalid`;
         const created = await db.auth.admin.createUser({
           email: loginEmail,
           email_confirm: true,
           phone: iranPhone(profile.phone),
           password: input.password,
-          phone_confirm: false,
-          app_metadata: { identity_assurance: "test_phone" },
+          phone_confirm: realPhone,
+          app_metadata: {
+            identity_assurance: realPhone ? "phone" : "test_phone",
+          },
           user_metadata: {
             first_name: profile.firstName,
             last_name: profile.lastName,
@@ -102,7 +121,7 @@ export async function POST(request: Request) {
           );
         return backofficeJson({
           ok: true,
-          testAccount: true,
+          testAccount: !realPhone,
           userId: created.data.user.id,
         });
       }
@@ -152,7 +171,15 @@ export async function POST(request: Request) {
     const testAccount =
       data.user?.app_metadata.identity_assurance === "test_phone" &&
       isTestLoginEmail(data.user.email);
-    if (error || (!data.user?.email_confirmed_at && !testAccount)) {
+    const phoneAccount =
+      data.user?.app_metadata.identity_assurance === "phone" &&
+      isInternalPhoneEmail(data.user.email) &&
+      Boolean(data.user.phone_confirmed_at);
+    if (
+      error ||
+      (!data.user?.email_confirmed_at && !testAccount && !phoneAccount) ||
+      (isInternalPhoneEmail(data.user?.email) && !testAccount && !phoneAccount)
+    ) {
       await client.auth.signOut({ scope: "local" });
       return backofficeJson(
         { error: "ورود انجام نشد؛ ایمیل، رمز و تأیید ایمیل را بررسی کنید." },

@@ -1,5 +1,34 @@
 # Ordilottery — یارگشت
 
+## Customer SMS OTP
+
+Both order intake and portal signup support Melipayamak Console OTP. Configure the
+server-only `ENABLE_MELIPAYAMAK_OTP=true`, `MELIPAYAMAK_OTP_TOKEN` and
+`OTP_HASH_SECRET` (32 random bytes as 64 hex characters). The real token is stored
+only in the ignored local environment. Console OTP currently returns HTTP 400:
+`مستلزم تنظیم و تأیید مدیر`; the provider must approve/activate this OTP method
+before real sends can succeed. No delivery success is claimed.
+
+Codes stay on the server as challenge/browser-bound HMACs: five-minute expiry,
+five attempts, single use, one send per minute and five sends per phone/browser
+per hour. Uncertain sends are not retried automatically. Enabling real OTP disables
+the old fixed-code path, including localhost. SMS verification proves the phone
+only; it cannot confirm an entered email, reset another account's password, grant
+staff access or unlock documents belonging to that email.
+
+Because hosted Phone Auth is disabled, phone signup uses a random internal Auth
+email alias and a confirmed phone with standard Supabase password sessions.
+Internal aliases are denied by document/Storage RLS and staff membership checks.
+Existing accounts retain their credentials; real email confirmation is separate.
+
+Run `npx playwright test --config playwright.otp.config.ts` for isolated browser →
+Next API → SQL tests with a synthetic SMS provider. `npm run demo` and the other
+browser suites explicitly clear real OTP credentials. `supabase/tests/mobile_otp_access.sql`
+checks real SQL authority with rollback and no sends. Only after explicit permission
+to send one real test SMS, set `QA_OTP_PHONE` privately and run
+`node --env-file=.env.local --import tsx scripts/qa-otp-live.ts`. It creates no account
+or order, removes its synthetic verification rows, and never automatically resends.
+
 Persian RTL, single-page DV service website using Next.js App Router, TypeScript,
 Tailwind CSS, official shadcn/ui primitives, local Vazirmatn fonts and limited GSAP.
 
