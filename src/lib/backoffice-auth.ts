@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { isTestLoginEmail } from "./customer-verification";
 
 /** Tokens live in HTTP-only cookies; authenticated RLS remains the write authority. */
 export async function createBackofficeClient() {
@@ -47,7 +48,13 @@ export async function getBackofficeSession() {
     data: { user },
     error,
   } = await client.auth.getUser();
-  if (error || !user?.email || !user.email_confirmed_at) return null;
+  if (
+    error ||
+    !user?.email ||
+    !user.email_confirmed_at ||
+    isTestLoginEmail(user.email)
+  )
+    return null;
   const { data: editor, error: editorError } = await client
     .from("cms_editors")
     .select("email")

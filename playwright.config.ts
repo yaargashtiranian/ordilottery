@@ -38,6 +38,7 @@ export default defineConfig({
     reuseExistingServer: false,
     env: {
       SUPABASE_SECRET_KEY: "",
+      ENABLE_TEST_OTP: "false",
       SUPABASE_URL: "http://127.0.0.1:9",
       SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_test_only",
       SUPABASE_SERVICE_ROLE_KEY: "",

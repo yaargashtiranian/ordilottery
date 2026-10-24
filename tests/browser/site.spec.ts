@@ -163,7 +163,7 @@ test("the narrative is present without JavaScript and previews stay out of searc
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "لاتاری،",
     );
-    await expect(page.locator("#story")).toContainText("Diversity Visa");
+    await expect(page.locator("#story")).toContainText("لاتاری DV");
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
       "content",
       /noindex/,

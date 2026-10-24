@@ -33,6 +33,7 @@ async function main() {
     campaignIds: string[] = [],
     contexts: BrowserContext[] = [];
   let staffId: string | undefined;
+  const phoneUserIds: string[] = [];
   const browser = await chromium.launch({
     headless: true,
     executablePath:
@@ -72,6 +73,19 @@ async function main() {
       .getByLabel("شماره تماس (الزامی)", { exact: true })
       .fill("09000000000");
     await page.getByRole("button", { name: "دیدن خلاصه و قیمت" }).click();
+    const reviewChoice = page.getByText("کد تخفیف داری؟", { exact: true });
+    const phoneChoice = page.getByRole("button", {
+      name: "تأیید موبایل (آزمایشی)",
+      exact: true,
+    });
+    await expect(reviewChoice.or(phoneChoice)).toBeVisible();
+    if (await phoneChoice.isVisible()) {
+      await phoneChoice.click();
+      await page.getByLabel("کد تأیید", { exact: true }).fill("123456");
+      await page
+        .getByRole("button", { name: "تأیید و ادامه", exact: true })
+        .click();
+    }
     if (code) {
       await page.getByText("کد تخفیف داری؟", { exact: true }).click();
       await page.getByLabel("کد تخفیف", { exact: true }).fill(code);
@@ -96,6 +110,93 @@ async function main() {
     if (membership.error) throw membership.error;
     const customer = await context(),
       page = await customer.newPage();
+    const phoneContext = await context(),
+      phonePage = await phoneContext.newPage();
+    await phonePage.goto(`${origin}/portal`);
+    await phonePage
+      .getByRole("button", { name: "ساخت حساب مشتری", exact: true })
+      .click();
+    await phonePage.getByLabel("نام", { exact: true }).fill("مشتری");
+    await phonePage.getByLabel("نام خانوادگی", { exact: true }).fill("آزمایشی");
+    await phonePage
+      .getByRole("textbox", { name: "ایمیل", exact: true })
+      .fill(`${marker}-phone@example.invalid`);
+    await phonePage
+      .getByLabel("شماره موبایل", { exact: true })
+      .fill("09000000008");
+    await phonePage.getByLabel("رمز عبور", { exact: true }).fill(password);
+    await phonePage
+      .getByRole("radio", { name: "موبایل (آزمایشی)", exact: true })
+      .check();
+    await phonePage
+      .getByRole("button", { name: "ساخت حساب مشتری", exact: true })
+      .click();
+    await phonePage.getByLabel("کد تأیید", { exact: true }).fill("000000");
+    await phonePage
+      .getByRole("button", { name: "تأیید و ساخت حساب", exact: true })
+      .click();
+    await expect(
+      phonePage.getByRole("alert").filter({ hasText: "کد نادرست" }),
+    ).toContainText("کد نادرست");
+    await phonePage.getByLabel("کد تأیید", { exact: true }).fill("۱۲۳۴۵۶");
+    const createdPhone = phonePage.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/portal/session") &&
+        response.request().method() === "POST",
+    );
+    await phonePage
+      .getByRole("button", { name: "تأیید و ساخت حساب", exact: true })
+      .click();
+    const phoneResponse = await createdPhone;
+    assert.equal(phoneResponse.status(), 200);
+    const phoneResult = await phoneResponse.json();
+    phoneUserIds.push(phoneResult.userId);
+    await rememberGuest(phoneContext);
+    await expect(
+      phonePage.getByText("حساب آزمایشی موبایل", { exact: true }),
+    ).toBeVisible();
+    const phoneUser = await db.auth.admin.getUserById(phoneResult.userId);
+    assert.ok(phoneUser.data.user?.email?.endsWith("@local-otp.invalid"));
+    assert.notEqual(
+      phoneUser.data.user?.email,
+      `${marker}-phone@example.invalid`,
+    );
+    assert.equal(
+      phoneUser.data.user?.app_metadata.identity_assurance,
+      "test_phone",
+    );
+    assert.equal(
+      (
+        await phoneContext.request.get(
+          `${origin}/api/documents/cases/33000000-0000-4000-8000-000000000001`,
+        )
+      ).status(),
+      401,
+    );
+    assert.equal(
+      (
+        await phoneContext.request.get(
+          `${origin}/api/backoffice/growth?section=orders`,
+        )
+      ).status(),
+      401,
+    );
+    await phonePage
+      .getByRole("button", { name: "خروج از حساب", exact: true })
+      .click();
+    await phonePage
+      .getByLabel("ایمیل یا موبایل", { exact: true })
+      .fill("09000000008");
+    await phonePage.getByLabel("رمز عبور", { exact: true }).fill(password);
+    await phonePage
+      .getByRole("button", { name: "ورود به پرتال", exact: true })
+      .click();
+    await expect(
+      phonePage.getByText("حساب آزمایشی موبایل", { exact: true }),
+    ).toBeVisible();
+    console.log(
+      "Passed: local phone-test signup rejects wrong code, accepts Persian 123456, signs in with password, and cannot access documents or staff data.",
+    );
     await review(page);
     const save = page.waitForResponse(
       (response) =>
@@ -484,6 +585,11 @@ async function main() {
         .delete()
         .eq("guest_hash", guest);
       if (chats.error) throw chats.error;
+      const checks = await db
+        .from("growth_identity_checks")
+        .delete()
+        .eq("guest_hash", guest);
+      if (checks.error) throw checks.error;
       await db
         .from("growth_rate_limits")
         .delete()
@@ -499,6 +605,10 @@ async function main() {
     if (staffId) {
       await db.from("cms_editors").delete().eq("email", staffEmail);
       const result = await db.auth.admin.deleteUser(staffId);
+      if (result.error) throw result.error;
+    }
+    for (const id of phoneUserIds) {
+      const result = await db.auth.admin.deleteUser(id);
       if (result.error) throw result.error;
     }
     console.log("Synthetic live-test records and Auth account removed.");

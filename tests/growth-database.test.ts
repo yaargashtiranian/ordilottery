@@ -43,6 +43,17 @@ async function order(
     reserve?: boolean;
   } = {},
 ) {
+  if (opts.reserve !== false) {
+    const owner = opts.guest || guest;
+    const started = await db.query<{ id: string }>(
+      "select growth_identity_start($1,$2,'test_phone') id",
+      [owner, { ...applicant, email: opts.email || applicant.email }],
+    );
+    await db.query("select growth_identity_attempt($1,$2,true,'test_phone')", [
+      owner,
+      started.rows[0].id,
+    ]);
+  }
   const result = await db.query<{
     result: {
       id: string;

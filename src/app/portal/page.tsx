@@ -1,15 +1,45 @@
 import Link from "next/link";
 import { Guide } from "@/components/growth/guide";
 import { brand } from "@/lib/site";
-import { LoginForm } from "@/components/backoffice/login-form";
+import { PortalAuth } from "@/components/portal-auth";
+import { createBackofficeClient } from "@/lib/backoffice-auth";
+import { PortalEmail } from "@/components/portal-email";
 import { CaseDocuments } from "@/components/documents/case-documents";
 import { PortalSignOut } from "@/components/documents/portal-signout";
 import { documentSession } from "@/lib/documents-server";
+import { isTestLoginEmail } from "@/lib/customer-verification";
 
 /** Only the invitation projection is read here; customers never receive internal case notes. */
 export default async function PortalPage() {
   // Missing cloud bindings still render the useful login screen rather than a server exception.
   const session = await documentSession().catch(() => null);
+  // Reserved mock logins are denied both by documentSession and restrictive database/storage policies.
+  if (!session) {
+    const client = await createBackofficeClient().catch(() => null);
+    const user = client ? (await client.auth.getUser()).data.user : null;
+    if (
+      user?.app_metadata.identity_assurance === "test_phone" &&
+      isTestLoginEmail(user.email)
+    )
+      return (
+        <main className="docs-portal">
+          <header className="docs-heading">
+            <div>
+              <Link href="/">{brand.name}</Link>
+              <h1>پرتال مشتری</h1>
+              <p>
+                {user.user_metadata.first_name} {user.user_metadata.last_name}
+              </p>
+            </div>
+            <PortalSignOut />
+          </header>
+          <p className="simulation-banner">حساب آزمایشی موبایل</p>
+          <p>برای دسترسی به مدارک، ایمیل پرونده را تأیید کنید.</p>
+          <PortalEmail initialEmail={user.user_metadata.claimed_email || ""} />
+          <Link href="/#registration">ثبت سفارش</Link>
+        </main>
+      );
+  }
   if (!session)
     return (
       <main className="bo-login">
@@ -19,10 +49,9 @@ export default async function PortalPage() {
           </Link>
           <div className="bo-login-heading">
             <Guide small />
-            <h1>خوش برگشتی؛ ادامه مسیر از اینجاست.</h1>
-            <p>ورود امن برای ارسال مدارک و دیدن نتیجهٔ بررسی کارشناس.</p>
+            <h1>پرتال مشتری</h1>
           </div>
-          <LoginForm portal />
+          <PortalAuth />
         </section>
       </main>
     );
@@ -48,10 +77,7 @@ export default async function PortalPage() {
           دریافت پرونده‌ها انجام نشد؛ صفحه را دوباره بارگذاری کنید.
         </p>
       ) : !data.length ? (
-        <p className="docs-empty">
-          پرونده‌ای برای این ایمیل وجود ندارد. برای تطبیق ایمیل پرونده با
-          پشتیبانی تماس بگیرید.
-        </p>
+        <p className="docs-empty">هنوز پرونده‌ای ندارید.</p>
       ) : (
         data.map((item) => (
           <section key={item.case_id}>

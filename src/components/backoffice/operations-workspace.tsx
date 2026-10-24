@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowUpLeft,
-  CalendarClock,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -306,11 +305,8 @@ export function OperationsWorkspace({
               <div className="ops-service-notice">
                 <ShieldCheck size={19} />
                 <div>
-                  <strong>ثبت رسید با تأیید درگاه تفاوت دارد.</strong>
-                  <p>
-                    اطلاعات این بخش به‌صورت دستی ثبت می‌شوند. اتصال مستقیم درگاه
-                    هنوز فعال نیست و ثبت بازپرداخت، انتقال وجه انجام نمی‌دهد.
-                  </p>
+                  <strong>رسیدهای دستی</strong>
+                  <p>درگاه متصل نیست؛ ثبت بازپرداخت وجهی منتقل نمی‌کند.</p>
                 </div>
               </div>
             ) : null}
@@ -320,7 +316,6 @@ export function OperationsWorkspace({
                   <h2>
                     {sections[section]} <span>{data ? money(count) : "—"}</span>
                   </h2>
-                  <p>برای مشاهده سوابق، روی عنوان هر رکورد بزنید.</p>
                 </div>
                 <div className="ops-filters">
                   <div className="bo-search">
@@ -559,16 +554,6 @@ function Overview({
           </div>
           <Timeline events={data?.activity ?? []} />
         </Card>
-      </div>
-      <div className="ops-bottom-strip">
-        <span>
-          <ShieldCheck size={16} />
-          اطلاعات فقط در دسترس مدیران مجاز است.
-        </span>
-        <span>
-          <CalendarClock size={16} />
-          پیگیری دقیق، همراهی بهتر.
-        </span>
       </div>
     </>
   );

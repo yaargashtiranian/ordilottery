@@ -43,6 +43,7 @@ backend.stdout!.on("data", (data: Buffer) => {
         SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_test_only",
         SUPABASE_SERVICE_ROLE_KEY: "synthetic-service-role-key",
         SUPABASE_SECRET_KEY: "",
+        ENABLE_TEST_OTP: "true",
         COMMERCE_MODE: "simulation",
         ENABLE_CHECKOUT: "false",
         ENABLE_MELIPAYAMAK: "false",

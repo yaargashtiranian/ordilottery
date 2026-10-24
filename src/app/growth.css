@@ -665,6 +665,39 @@
   text-decoration: underline;
   margin-top: 10px;
 }
+.customer-verification {
+  display: grid;
+  gap: 14px;
+  padding-block: 10px;
+}
+.customer-verification h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+.customer-verification p {
+  font-size: 12px;
+  line-height: 1.9;
+}
+.portal-profile-fields {
+  display: grid;
+  gap: 16px;
+}
+.portal-verification-method {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 13px;
+}
+.portal-verification-method legend {
+  margin-bottom: 10px;
+}
+.portal-verification-method label {
+  gap: 7px;
+}
+.portal-email-form {
+  max-width: 420px;
+  margin-block: 20px;
+}
 
 /* Support controls share the site's RTL layout and keep private message bodies out of toasts. */
 .chat-lead-form {

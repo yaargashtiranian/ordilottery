@@ -21,6 +21,7 @@ import {
 } from "@/lib/registration";
 import { couponCode, type CommerceMode, type Quote } from "@/lib/growth/model";
 import { experience, followCheckout, journeyEvent } from "@/lib/growth/client";
+import { CustomerVerification, verifyCustomer } from "./customer-verification";
 
 const fields = [
   {
@@ -52,7 +53,7 @@ const fields = [
     placeholder: "۰۹۱۲۳۴۵۶۷۸۹",
   },
 ] as const;
-const labels = ["انتخاب همراهی", "آشنایی کوتاه", "مرور و تصمیم"];
+const labels = ["انتخاب خدمت", "اطلاعات تماس", "خلاصه سفارش"];
 
 /** Three reversible steps keep the four-field contract; nothing is submitted until explicit confirmation. */
 export function ServiceSignup({
@@ -63,6 +64,7 @@ export function ServiceSignup({
   paymentsEnabled?: boolean;
 }) {
   const [step, setStep] = useState(0);
+  const [verification, setVerification] = useState(false);
   const [resume, setResume] = useState("");
   useEffect(() => {
     if (mode === "disabled") return;
@@ -88,6 +90,32 @@ export function ServiceSignup({
     email: "",
     phone: "",
   });
+  useEffect(() => {
+    if (
+      mode === "disabled" ||
+      new URLSearchParams(window.location.search).get("contact") !== "confirmed"
+    )
+      return;
+    const controller = new AbortController();
+    fetch("/api/portal/verification", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (
+          !controller.signal.aborted &&
+          data.check?.verified &&
+          data.check.method === "email"
+        ) {
+          setApplicant(data.check.profile);
+          setStep(2);
+          window.history.replaceState(null, "", "/#registration");
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [mode]);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [code, setCode] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -167,7 +195,34 @@ export function ServiceSignup({
     }
     setErrors({});
     if (step === 1) {
-      move(2);
+      if (mode === "disabled") {
+        move(2);
+        return;
+      }
+      lock.current = true;
+      setBusy(true);
+      setMessage("");
+      try {
+        const data = await verifyCustomer({
+          action: "status",
+          profile: validation.data,
+        });
+        setApplicant({
+          firstName: validation.data.firstName,
+          lastName: validation.data.lastName,
+          email: validation.data.email.toLowerCase(),
+          phone: validation.data.phone,
+        });
+        if (data.ready) move(2);
+        else setVerification(true);
+      } catch (error) {
+        setMessage(
+          error instanceof Error ? error.message : "ارتباط برقرار نشد.",
+        );
+      } finally {
+        lock.current = false;
+        setBusy(false);
+      }
       return;
     }
     if (!consent) {
@@ -222,14 +277,7 @@ export function ServiceSignup({
       <div className="guide-intro">
         <Guide small />
         <div>
-          <span className="eyebrow">راهنمای قدم اول</span>
-          <p>
-            {step === 0
-              ? "سلام! دوست داری چطور همراهت باشیم؟"
-              : step === 1
-                ? "خوش اومدی! فعلاً همین چهار مورد کافیه."
-                : "عالیه! قبل از تصمیم، همه‌چیز رو مرور کن."}
-          </p>
+          <span className="eyebrow">ثبت‌نام خدمات</span>
         </div>
       </div>
       <ol className="journey-progress" aria-label="مراحل درخواست">
@@ -248,19 +296,10 @@ export function ServiceSignup({
       </ol>
       <form noValidate onSubmit={submit} aria-busy={busy}>
         <h2 ref={heading} tabIndex={-1} className="journey-question">
-          {
-            [
-              "روش همراهی‌ات را انتخاب کن",
-              "چطور با تو در ارتباط باشیم؟",
-              "همه‌چیز روشن؛ انتخاب با تو",
-            ][step]
-          }
+          {["انتخاب خدمت", "اطلاعات تماس", "خلاصه سفارش"][step]}
         </h2>
         {step === 0 && (
           <>
-            <p className="journey-hint">
-              اول مسیر را بشناس؛ پرداخت فقط بعد از مرور سفارش.
-            </p>
             <fieldset className="journey-options" disabled={busy}>
               <legend className="sr-only">شیوه همراهی شما</legend>
               {(
@@ -316,12 +355,8 @@ export function ServiceSignup({
             </details>
           </>
         )}
-        {step === 1 && (
+        {step === 1 && !verification && (
           <>
-            <p className="journey-hint">
-              از همان ایمیلی استفاده کن که برای ورود به پرونده خواهی داشت. مدارک
-              هویتی برای مرحله بعد است.
-            </p>
             <div className="form-fields">
               {fields.map((field) => (
                 <div className="field-group" key={field.name}>
@@ -365,6 +400,16 @@ export function ServiceSignup({
             </div>
           </>
         )}
+        {step === 1 && verification ? (
+          <CustomerVerification
+            profile={applicant}
+            onVerified={() => {
+              setVerification(false);
+              move(2);
+            }}
+            onBack={() => setVerification(false)}
+          />
+        ) : null}
         {step === 2 && (
           <>
             <div className="journey-review">
@@ -442,7 +487,7 @@ export function ServiceSignup({
                 <a href="/privacy" target="_blank" rel="noreferrer">
                   حریم خصوصی
                 </a>{" "}
-                را می‌پذیرم. این درخواست، ثبت رسمی DV نیست.
+                را می‌پذیرم.
               </span>
             </label>
           </>
@@ -450,35 +495,37 @@ export function ServiceSignup({
         <div role="status" className="journey-message">
           {message}
         </div>
-        <div className="journey-actions">
-          {step > 0 && (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => move(step - 1)}
-              aria-label="مرحله قبل"
-            >
-              <ArrowRight />
+        {!verification ? (
+          <div className="journey-actions">
+            {step > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={busy}
+                onClick={() => move(step - 1)}
+                aria-label="مرحله قبل"
+              >
+                <ArrowRight />
+              </Button>
+            )}
+            <Button className="journey-next" type="submit" disabled={busy}>
+              {busy
+                ? "در حال بررسی…"
+                : step === 0
+                  ? "مسیر من را بساز"
+                  : step === 1
+                    ? "دیدن خلاصه و قیمت"
+                    : mode === "disabled"
+                      ? "بررسی مسیر درخواست"
+                      : total === 0
+                        ? "تأیید سفارش بدون پرداخت"
+                        : paymentsEnabled || mode === "simulation"
+                          ? "تأیید و ادامه به پرداخت"
+                          : "ثبت سفارش و دریافت کد پیگیری"}
+              <ArrowLeft size={18} />
             </Button>
-          )}
-          <Button className="journey-next" type="submit" disabled={busy}>
-            {busy
-              ? "در حال بررسی…"
-              : step === 0
-                ? "مسیر من را بساز"
-                : step === 1
-                  ? "دیدن خلاصه و قیمت"
-                  : mode === "disabled"
-                    ? "بررسی مسیر درخواست"
-                    : total === 0
-                      ? "تأیید سفارش بدون پرداخت"
-                      : paymentsEnabled || mode === "simulation"
-                        ? "تأیید و ادامه به پرداخت"
-                        : "ثبت سفارش و دریافت کد پیگیری"}
-            <ArrowLeft size={18} />
-          </Button>
-        </div>
+          </div>
+        ) : null}
         <p className="journey-footnote">
           <ShieldCheck size={14} />
           {mode === "disabled"
@@ -487,7 +534,7 @@ export function ServiceSignup({
               ? "حالت آزمایشی؛ وجه و پرونده واقعی ایجاد نمی‌شود."
               : paymentsEnabled
                 ? "پرداخت فقط برای خدمات شرکت؛ بدون تضمین انتخاب."
-                : "سفارش شما ذخیره می‌شود؛ پرداخت بانکی فعلاً غیرفعال است."}
+                : "پرداخت بانکی فعلاً غیرفعال است."}
         </p>
       </form>
       {resume && (
@@ -496,10 +543,7 @@ export function ServiceSignup({
         </Link>
       )}
       <noscript>
-        <p>
-          برای استفاده از فرم تعاملی JavaScript را فعال کنید. توضیحات خدمات و
-          شرایط در همین صفحه قابل مطالعه است.
-        </p>
+        <p>برای استفاده از فرم، JavaScript را فعال کنید.</p>
       </noscript>
     </section>
   );

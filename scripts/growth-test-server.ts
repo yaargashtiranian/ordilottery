@@ -35,6 +35,35 @@ async function main() {
     ).toString("base64url"),
     "test-signature",
   ].join(".");
+  // Minimal synthetic customer Auth lets browser tests verify phone-only isolation without external SMS/email.
+  type FixtureUser = Record<string, unknown> & {
+    id: string;
+    email?: string;
+    phone?: string;
+  };
+  const users = new Map<
+    string,
+    { user: FixtureUser; password: string; token: string }
+  >([[email, { user, password: "synthetic-password", token }]]);
+  const sessions = new Map<string, FixtureUser>([[token, user]]);
+  function customerToken(profile: FixtureUser) {
+    return [
+      Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString(
+        "base64url",
+      ),
+      Buffer.from(
+        JSON.stringify({
+          sub: profile.id,
+          email: profile.email,
+          phone: profile.phone,
+          role: "authenticated",
+          aud: "authenticated",
+          exp: Math.floor(Date.now() / 1000) + 86400,
+        }),
+      ).toString("base64url"),
+      "test-signature",
+    ].join(".");
+  }
   await db.query(
     "insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())",
     [uid, email],
@@ -54,6 +83,7 @@ async function main() {
     "growth_conversations",
     "growth_messages",
     "growth_chat_inbox",
+    "growth_identity_checks",
     "cms_pages",
     "cms_editors",
   ]);
@@ -70,6 +100,11 @@ async function main() {
     "growth_staff_read",
     "growth_staff_chat",
     "growth_staff_notifications",
+    "growth_identity_status",
+    "growth_identity_start",
+    "growth_identity_current",
+    "growth_identity_attempt",
+    "growth_test_login",
   ]);
   const identifier = (value: string) => {
     if (!/^[a-z_][a-z0-9_]*$/.test(value))
@@ -95,32 +130,102 @@ async function main() {
       }
       const input = raw ? JSON.parse(raw) : {};
       const bearer = req.headers.authorization?.replace(/^Bearer /, "");
+      const identity = bearer ? sessions.get(bearer) : undefined;
+      if (url.pathname === "/auth/v1/admin/users" && req.method === "POST") {
+        if (bearer !== "synthetic-service-role-key")
+          return send({ msg: "Forbidden" }, 403);
+        const phone = String(input.phone || "").replace(/^\+/, "");
+        if (users.has(phone)) return send({ msg: "Already registered" }, 422);
+        const id = crypto.randomUUID();
+        const profile: FixtureUser = {
+          id,
+          email: input.email,
+          email_confirmed_at: input.email_confirm
+            ? new Date().toISOString()
+            : undefined,
+          phone,
+          phone_confirmed_at: input.phone_confirm
+            ? new Date().toISOString()
+            : undefined,
+          aud: "authenticated",
+          role: "authenticated",
+          app_metadata: input.app_metadata,
+          user_metadata: input.user_metadata,
+          identities: [],
+          created_at: new Date().toISOString(),
+        };
+        const nextToken = customerToken(profile);
+        users.set(phone, {
+          user: profile,
+          password: input.password,
+          token: nextToken,
+        });
+        users.set(input.email, {
+          user: profile,
+          password: input.password,
+          token: nextToken,
+        });
+        sessions.set(nextToken, profile);
+        await db.query(
+          "insert into auth.users(id,phone,email,email_confirmed_at,raw_app_meta_data) values($1,$2,$3,now(),$4)",
+          [id, phone, input.email, input.app_metadata],
+        );
+        return send(profile);
+      }
+      if (url.pathname === "/auth/v1/signup") {
+        const id = crypto.randomUUID();
+        const profile: FixtureUser = {
+          id,
+          email: input.email,
+          aud: "authenticated",
+          role: "authenticated",
+          app_metadata: { provider: "email" },
+          user_metadata: input.data || {},
+          identities: [],
+          created_at: new Date().toISOString(),
+        };
+        await db.query("insert into auth.users(id,email) values($1,$2)", [
+          id,
+          input.email,
+        ]);
+        return send(profile);
+      }
       if (url.pathname === "/auth/v1/token") {
-        if (input.email !== email || input.password !== "synthetic-password")
+        const account = users.get(
+          input.email || String(input.phone || "").replace(/^\+/, ""),
+        );
+        if (!account || input.password !== account.password)
           return send({ msg: "Invalid test credentials" }, 400);
         return send({
-          access_token: token,
+          access_token: account.token,
           refresh_token: "test-refresh-token",
           token_type: "bearer",
           expires_in: 86400,
           expires_at: Math.floor(Date.now() / 1000) + 86400,
-          user,
+          user: account.user,
         });
       }
       if (url.pathname === "/auth/v1/user")
-        return bearer === token
-          ? send(user)
+        return identity
+          ? send(identity)
           : send({ msg: "Invalid test session" }, 401);
       if (url.pathname === "/auth/v1/logout") return send({});
       if (!url.pathname.startsWith("/rest/v1/"))
         return send({ error: "Not implemented by test fixture" }, 404);
-      const staff = bearer === token;
       const service = bearer === "synthetic-service-role-key";
-      const role = service ? "service_role" : staff ? "authenticated" : "anon";
+      const role = service
+        ? "service_role"
+        : identity
+          ? "authenticated"
+          : "anon";
       const result = await db.transaction(async (tx) => {
         await tx.exec(`set local role ${role}`);
         await tx.query(`select set_config('request.jwt.claims',$1,true)`, [
-          JSON.stringify(staff ? { sub: uid, email, role } : { role }),
+          JSON.stringify(
+            identity
+              ? { sub: identity.id, email: identity.email, role }
+              : { role },
+          ),
         ]);
         const name = url.pathname.split("/").at(-1)!;
         if (url.pathname.includes("/rpc/")) {

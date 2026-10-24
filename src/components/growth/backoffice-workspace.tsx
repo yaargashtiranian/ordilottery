@@ -229,18 +229,14 @@ export function GrowthWorkspace({
         <span className="eyebrow">رشد و ارتباط با مشتری</span>
         <h1>
           {section === "campaigns"
-            ? "کمپین‌ها؛ با ظرفیت مشخص"
+            ? "کمپین‌ها"
             : section === "chat"
               ? "میز گفت‌وگو"
-              : "از انتخاب تا تکمیل سفارش"}
+              : "سفارش‌ها"}
         </h1>
-        <p>
-          {section === "campaigns"
-            ? "درصد و شرایط پس از ساخت ثابت‌اند. برای تغییر شرایط، کمپین جدید بسازید؛ کد قبلی را می‌توانید متوقف کنید."
-            : section === "chat"
-              ? "پیام‌های این بخش برای مشتری نمایش داده می‌شوند. یادداشت‌های داخلی در بخش پشتیبانی باقی می‌مانند."
-              : "سفارش‌های آزمایشی درآمد یا پرونده واقعی ایجاد نمی‌کنند. تخفیف صددرصد، پرداخت بانکی نیست."}
-        </p>
+        {section === "campaigns" ? (
+          <p>شرایط کمپین پس از ساخت قابل ویرایش نیست.</p>
+        ) : null}
       </header>
       {error && (
         <p className="bo-error-banner" role="alert">
@@ -497,9 +493,7 @@ export function GrowthWorkspace({
                     <a href={`tel:${lead.phone}`}>
                       <bdi>{lead.phone}</bdi>
                     </a>
-                    <small>
-                      شمارهٔ اعلام‌شده توسط مخاطب؛ تأیید پیامکی انجام نشده است.
-                    </small>
+                    <small>شمارهٔ تأییدنشده</small>
                   </div>
                 ) : (
                   <p className="chat-disclosure">
@@ -558,9 +552,6 @@ export function GrowthWorkspace({
                     </Button>
                   </div>
                 </form>
-                <p>
-                  آخرین ۱۰۰ پیام؛ از درخواست مدارک هویتی در چت خودداری کنید.
-                </p>
               </>
             ) : (
               <p>یک گفت‌وگو را انتخاب کنید.</p>

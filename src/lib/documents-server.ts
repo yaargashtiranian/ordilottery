@@ -13,6 +13,7 @@ import {
   encryptDocument,
 } from "@/lib/documents-crypto";
 import { isUuid } from "@/lib/operations-model";
+import { isTestLoginEmail } from "./customer-verification";
 import {
   backofficeJson,
   isBackofficeOrigin,
@@ -31,7 +32,13 @@ export async function documentSession() {
     data: { user },
     error,
   } = await client.auth.getUser();
-  if (error || !user?.email || !user.email_confirmed_at) return null;
+  if (
+    error ||
+    !user?.email ||
+    !user.email_confirmed_at ||
+    isTestLoginEmail(user.email)
+  )
+    return null;
   const { data, error: membershipError } = await client
     .from("cms_editors")
     .select("email")

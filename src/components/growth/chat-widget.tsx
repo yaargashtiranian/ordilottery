@@ -90,7 +90,7 @@ export function ChatWidget() {
             if (!stopped) {
               setLead(null);
               setUnread(0);
-              setStatus("برای شروع گفت‌وگو اطلاعات تماس را وارد کنید.");
+              setStatus("");
             }
           } else {
             const data = await response.json();
@@ -108,13 +108,7 @@ export function ChatWidget() {
             setLead(data.conversation?.lead || null);
             if (full) setMessages(data.messages || []);
             setStatus(
-              data.conversation?.status === "closed"
-                ? "گفت‌وگو بسته شده؛ با پیام جدید دوباره باز می‌شود."
-                : data.conversation?.status === "replied"
-                  ? "کارشناس پاسخ داده است."
-                  : data.conversation
-                    ? "پیام‌ها در همین مرورگر نمایش داده می‌شوند."
-                    : "برای شروع گفت‌وگو اطلاعات تماس را وارد کنید.",
+              data.conversation?.status === "closed" ? "گفت‌وگو بسته است." : "",
             );
           }
           delay = full ? 4000 : 10000;
@@ -303,11 +297,7 @@ export function ChatWidget() {
               <h2 id="chat-title">
                 {human ? "گفت‌وگو با کارشناس" : "راهنمای شروع"}
               </h2>
-              <small>
-                {human
-                  ? "پاسخ تیم در همین پنجره"
-                  : "پاسخ‌گوی خودکار سؤالات رایج"}
-              </small>
+              {!human ? <small>راهنمای خودکار</small> : null}
             </div>
             <Button
               ref={close}
@@ -321,7 +311,6 @@ export function ChatWidget() {
           </header>
           {!human ? (
             <div className="chat-assistant">
-              <p>سلام! کجای مسیر کمکت کنم؟</p>
               <div className="chat-topics">
                 {assistantTopics.map((topic) => (
                   <button
@@ -342,9 +331,6 @@ export function ChatWidget() {
                 می‌خواهم با کارشناس صحبت کنم
                 {unread ? ` (${persianNumber(unread)})` : null}
               </Button>
-              <p className="chat-disclosure">
-                پاسخ‌های بالا خودکارند؛ برای سؤال شخصی، تیم پاسخ می‌دهد.
-              </p>
             </div>
           ) : (
             <>
@@ -354,8 +340,7 @@ export function ChatWidget() {
               </button>
               {!lead ? (
                 <form className="chat-lead-form" onSubmit={start}>
-                  <h3>قبل از شروع، با هم آشنا شویم</h3>
-                  <p>برای پیگیری درخواست پشتیبانی، این سه مورد را وارد کنید.</p>
+                  <h3>اطلاعات تماس</h3>
                   {(
                     [
                       ["firstName", "نام", "given-name"],
@@ -396,8 +381,7 @@ export function ChatWidget() {
                     </div>
                   ))}
                   <p className="chat-disclosure">
-                    با شروع گفت‌وگو، نام و شمارهٔ شما برای پیگیری در Supabase
-                    ذخیره و در اختیار تیم پشتیبانی قرار می‌گیرد.{" "}
+                    با شروع گفت‌وگو، اطلاعات تماس برای پشتیبانی ذخیره می‌شود.{" "}
                     <a href="/privacy" target="_blank" rel="noreferrer">
                       حریم خصوصی
                     </a>
@@ -408,9 +392,6 @@ export function ChatWidget() {
                 </form>
               ) : (
                 <>
-                  <p className="chat-contact-summary">
-                    {lead.firstName} {lead.lastName}، سؤالتان را بنویسید.
-                  </p>
                   <div
                     ref={log}
                     role="log"
@@ -432,10 +413,7 @@ export function ChatWidget() {
                     }}
                   >
                     {!messages.length ? (
-                      <p>
-                        سؤالت را کوتاه بنویس. اطلاعات کارت، عکس یا مدارک هویتی
-                        را اینجا نفرست.
-                      </p>
+                      <p>مدارک و اطلاعات کارت را در چت نفرستید.</p>
                     ) : null}
                     {messages.map((message) => (
                       <article
@@ -449,9 +427,11 @@ export function ChatWidget() {
                       </article>
                     ))}
                   </div>
-                  <p className="chat-connection" role="status">
-                    {status}
-                  </p>
+                  {status ? (
+                    <p className="chat-connection" role="status">
+                      {status}
+                    </p>
+                  ) : null}
                   {unread ? (
                     <button
                       className="chat-read-all"
@@ -487,8 +467,6 @@ export function ChatWidget() {
                     </Button>
                   </form>
                   <p className="chat-disclosure">
-                    پیام برای تیم ذخیره می‌شود؛ آخرین ۱۰۰ پیام نمایش داده
-                    می‌شود.{" "}
                     <a href="/privacy" target="_blank" rel="noreferrer">
                       حریم خصوصی
                     </a>

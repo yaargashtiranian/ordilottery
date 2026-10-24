@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { randomUUID } from "node:crypto";
+import { randomUUID, randomInt } from "node:crypto";
 
 /** Drive real UI -> Next API -> isolated PostgreSQL migrations; no page.route mocks replace feature behavior. */
 async function review(page: Page, code: string) {
@@ -19,6 +19,43 @@ async function review(page: Page, code: string) {
     .getByLabel("شماره تماس (الزامی)", { exact: true })
     .fill("۰۹۱۲۳۴۵۶۷۸۹");
   await page.getByRole("button", { name: "دیدن خلاصه و قیمت" }).click();
+  if (
+    await page
+      .getByRole("button", { name: "تأیید موبایل (آزمایشی)", exact: true })
+      .isVisible()
+      .catch(() => false)
+  ) {
+    await page
+      .getByRole("button", { name: "تأیید موبایل (آزمایشی)", exact: true })
+      .click();
+    await page.getByLabel("کد تأیید", { exact: true }).fill("123456");
+    await page
+      .getByRole("button", { name: "تأیید و ادامه", exact: true })
+      .click();
+  } else {
+    // The asynchronous contact lookup may still be rendering the verification choice.
+    await expect(
+      page.getByText("کد تخفیف داری؟", { exact: true }).or(
+        page.getByRole("button", {
+          name: "تأیید موبایل (آزمایشی)",
+          exact: true,
+        }),
+      ),
+    ).toBeVisible();
+    if (
+      await page
+        .getByRole("button", { name: "تأیید موبایل (آزمایشی)", exact: true })
+        .isVisible()
+    ) {
+      await page
+        .getByRole("button", { name: "تأیید موبایل (آزمایشی)", exact: true })
+        .click();
+      await page.getByLabel("کد تأیید", { exact: true }).fill("123456");
+      await page
+        .getByRole("button", { name: "تأیید و ادامه", exact: true })
+        .click();
+    }
+  }
   await page.getByText("کد تخفیف داری؟", { exact: true }).click();
   await page.getByLabel("کد تخفیف", { exact: true }).fill(code);
   await page.getByRole("button", { name: "بررسی کد", exact: true }).click();
@@ -268,6 +305,193 @@ test("assistant works locally and human messages cross to staff and back without
   }
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("new registrations require a bound code before ordering", async ({
+  page,
+  baseURL,
+}) => {
+  const profile = {
+    firstName: "مشتری",
+    lastName: "آزمایشی",
+    email: `verify-${randomUUID()}@example.invalid`,
+    phone: `090${String(randomInt(100000000)).padStart(8, "0")}`,
+  };
+  const denied = await page.request.post("/api/experience", {
+    headers: { Origin: baseURL! },
+    data: {
+      action: "order",
+      ...profile,
+      plan: "online",
+      idempotencyKey: randomUUID(),
+      consent: true,
+      expectedTotal: 1499000,
+      code: "",
+    },
+  });
+  expect(denied.status()).toBe(422);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "مسیر من را بساز", exact: true })
+    .click();
+  await page
+    .getByLabel("نام (الزامی)", { exact: true })
+    .fill(profile.firstName);
+  await page
+    .getByLabel("نام خانوادگی (الزامی)", { exact: true })
+    .fill(profile.lastName);
+  await page.getByLabel("ایمیل (الزامی)", { exact: true }).fill(profile.email);
+  await page
+    .getByLabel("شماره تماس (الزامی)", { exact: true })
+    .fill(profile.phone);
+  await page
+    .getByRole("button", { name: "دیدن خلاصه و قیمت", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "تأیید موبایل (آزمایشی)", exact: true })
+    .click();
+  await page.getByLabel("کد تأیید", { exact: true }).fill("000000");
+  await page
+    .getByRole("button", { name: "تأیید و ادامه", exact: true })
+    .click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "کد نادرست" }),
+  ).toContainText("کد نادرست");
+  await page.getByLabel("کد تأیید", { exact: true }).fill("۱۲۳۴۵۶");
+  const axe = await new AxeBuilder({ page })
+    .include(".customer-verification")
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(axe.violations).toEqual([]);
+  await page.screenshot({ path: test.info().outputPath("order-otp.png") });
+  await page
+    .getByRole("button", { name: "تأیید و ادامه", exact: true })
+    .click();
+  await expect(page.getByText("کد تخفیف داری؟", { exact: true })).toBeVisible();
+  // A changed contact pair cannot reuse the proof even when the client jumps directly to the API.
+  const changed = await page.request.post("/api/experience", {
+    headers: { Origin: baseURL! },
+    data: {
+      action: "order",
+      ...profile,
+      email: `other-${randomUUID()}@example.invalid`,
+      phone: "09000000009",
+      plan: "online",
+      idempotencyKey: randomUUID(),
+      consent: true,
+      expectedTotal: 1499000,
+      code: "",
+    },
+  });
+  expect(changed.status()).toBe(422);
+});
+
+test("phone test signup supports password login without confirming an email or unlocking private records", async ({
+  page,
+  baseURL,
+}) => {
+  await page.goto("/portal");
+  await page
+    .getByRole("button", { name: "ساخت حساب مشتری", exact: true })
+    .click();
+  const phone = `090${String(randomInt(100000000)).padStart(8, "0")}`;
+  await page.getByLabel("نام", { exact: true }).fill("مشتری");
+  await page.getByLabel("نام خانوادگی", { exact: true }).fill("آزمایشی");
+  await page
+    .getByRole("textbox", { name: "ایمیل", exact: true })
+    .fill(`portal-${randomUUID()}@example.invalid`);
+  await page.getByLabel("شماره موبایل", { exact: true }).fill(phone);
+  await page
+    .getByLabel("رمز عبور", { exact: true })
+    .fill("synthetic-customer-password");
+  await page
+    .getByRole("radio", { name: "موبایل (آزمایشی)", exact: true })
+    .check();
+  await page
+    .getByRole("button", { name: "ساخت حساب مشتری", exact: true })
+    .click();
+  await page.getByLabel("کد تأیید", { exact: true }).fill("123456");
+  const axe = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(axe.violations).toEqual([]);
+  await page.screenshot({ path: test.info().outputPath("portal-otp.png") });
+  await page
+    .getByRole("button", { name: "تأیید و ساخت حساب", exact: true })
+    .click();
+  await expect(
+    page.getByText("حساب آزمایشی موبایل", { exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByText("حساب آزمایشی موبایل", { exact: true }),
+  ).toBeVisible();
+  expect(
+    (
+      await page.request.get(
+        "/api/documents/cases/33000000-0000-4000-8000-000000000001",
+      )
+    ).status(),
+  ).toBe(401);
+  expect(
+    (await page.request.get("/api/backoffice/growth?section=orders")).status(),
+  ).toBe(401);
+  await page.getByRole("button", { name: "خروج از حساب", exact: true }).click();
+  await page.getByLabel("ایمیل یا موبایل", { exact: true }).fill(phone);
+  await page
+    .getByLabel("رمز عبور", { exact: true })
+    .fill("synthetic-customer-password");
+  await page
+    .getByRole("button", { name: "ورود به پرتال", exact: true })
+    .click();
+  await expect(
+    page.getByText("حساب آزمایشی موبایل", { exact: true }),
+  ).toBeVisible();
+  // The public signup endpoint never overwrites an existing phone account or its password.
+  const retry = await page.request.post("/api/portal/session", {
+    headers: { Origin: baseURL! },
+    data: {
+      action: "register",
+      method: "test_phone",
+      firstName: "مشتری",
+      lastName: "آزمایشی",
+      email: "different@example.invalid",
+      phone,
+      password: "replacement-password",
+    },
+  });
+  expect([409, 422]).toContain(retry.status());
+});
+
+test("email signup waits for real confirmation and does not grant a session", async ({
+  page,
+}) => {
+  await page.goto("/portal");
+  await page
+    .getByRole("button", { name: "ساخت حساب مشتری", exact: true })
+    .click();
+  await page.getByLabel("نام", { exact: true }).fill("مشتری");
+  await page.getByLabel("نام خانوادگی", { exact: true }).fill("ایمیلی");
+  await page
+    .getByRole("textbox", { name: "ایمیل", exact: true })
+    .fill(`email-${randomUUID()}@example.invalid`);
+  await page.getByLabel("شماره موبایل", { exact: true }).fill("09000000005");
+  await page
+    .getByLabel("رمز عبور", { exact: true })
+    .fill("synthetic-customer-password");
+  await page
+    .getByRole("button", { name: "ساخت حساب مشتری", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "لینک تأیید را در ایمیل باز کنید.",
+  );
+  expect(
+    (
+      await page.request.get(
+        "/api/documents/cases/33000000-0000-4000-8000-000000000001",
+      )
+    ).status(),
+  ).toBe(401);
 });
 
 test("public routes reject cross-site writes and missing staff sessions", async ({

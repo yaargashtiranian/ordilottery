@@ -89,6 +89,8 @@ export async function limit(key: string, max: number, seconds = 60) {
 
 /** Database internals and applicant values never escape in public errors. */
 export function databaseError(message?: string): never {
+  if (message?.includes("CONTACT_VERIFICATION_REQUIRED"))
+    throw new GrowthError("ابتدا ایمیل یا موبایل را تأیید کنید.", 422);
   if (message?.includes("CHAT_LEAD_REQUIRED"))
     throw new GrowthError(
       "قبل از ارسال پیام، نام و شماره تماس را ثبت کنید.",
