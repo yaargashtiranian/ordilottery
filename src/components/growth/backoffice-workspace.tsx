@@ -44,8 +44,10 @@ const date = (value: string) =>
 /** All changes travel through the authenticated API. Polling is visible-tab-only and lists are paginated. */
 export function GrowthWorkspace({
   section,
+  defaultMode = "simulation",
 }: {
   section: "campaigns" | "chat" | "orders";
+  defaultMode?: string;
 }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [stats, setStats] = useState<Stat[]>([]);
@@ -282,7 +284,7 @@ export function GrowthWorkspace({
               </label>
               <label>
                 محیط استفاده
-                <select name="mode" defaultValue="simulation">
+                <select name="mode" defaultValue={defaultMode}>
                   <option value="simulation">شبیه‌ساز داخلی</option>
                   <option value="sandbox">درگاه آزمایشی زرین‌پال</option>
                   <option value="live">واقعی</option>

@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { isUuid } from "@/lib/operations-model";
 import { CheckoutResult } from "@/components/growth/checkout-result";
 import { ChatWidget } from "@/components/growth/chat-widget";
+import { commerceMode } from "@/lib/growth/server";
+import { gatewaySettings } from "@/lib/growth/zarinpal";
 export const metadata = {
   title: "پیگیری درخواست",
   robots: { index: false, follow: false },
@@ -16,7 +18,10 @@ export default async function CheckoutPage({
   if (!isUuid(id)) notFound();
   return (
     <>
-      <CheckoutResult id={id} />
+      <CheckoutResult
+        id={id}
+        paymentsEnabled={Boolean(gatewaySettings(commerceMode()))}
+      />
       <ChatWidget />
     </>
   );

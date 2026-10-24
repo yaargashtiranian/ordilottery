@@ -16,7 +16,8 @@ export class GrowthError extends Error {
 /** No secret is serialized into public components. A privileged client never accepts a browser JWT. */
 export function growthClient() {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key =
+    process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key)
     throw new GrowthError(
       "ارتباط با سرویس هنوز آماده نیست؛ کمی بعد دوباره تلاش کنید.",
@@ -35,13 +36,16 @@ export function growthClient() {
   });
 }
 
-/** Live charging requires two explicit switches; local simulation never talks to a bank. */
+/** Order intake and bank charging are independent; only the gateway boundary enables money movement. */
 export function commerceMode(): CommerceMode {
   const mode = process.env.COMMERCE_MODE;
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY)
+  if (
+    !process.env.SUPABASE_URL ||
+    !(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
+  )
     return "disabled";
   if (mode === "simulation" || mode === "sandbox") return mode;
-  if (mode === "live" && process.env.ENABLE_CHECKOUT === "true") return "live";
+  if (mode === "live") return "live";
   return "disabled";
 }
 export const hash = (value: string) =>

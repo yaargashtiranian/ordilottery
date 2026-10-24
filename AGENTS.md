@@ -75,6 +75,7 @@
 ## Growth features (2026-10-23)
 
 - Read `docs/growth-setup.md` before changing campaigns, checkout, or customer chat. The default is disabled; simulation never creates real CRM cases or bank receipts.
+- Real Supabase order intake, campaigns and chat were authorized on 2026-10-24. Order mode `live` is independent of bank charging: preserve `ENABLE_CHECKOUT=false` until a later explicit request enables the gateway. Pending payable orders must remain unpaid; a full-discount completion may create a real case with document intake closed. Never let demo/test processes inherit the real backend secret key.
 - Preserve campaign/order row locking, immutable price snapshots, input/guest idempotency and the distinction between coupon credit, bank receipts and manual receipts. A browser redirect is never proof of payment.
 - Customer chat is separate from internal ticket notes. The opaque guest cookie only grants access to its own chat/orders; it never authorizes documents.
 - Use `npm run demo` with synthetic information for review and `npm run test:growth` for the isolated SQL-backed browser suite. Do not treat either as evidence of live Supabase, Auth email or payment connectivity.

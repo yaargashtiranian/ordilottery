@@ -18,11 +18,11 @@ npm run demo
 
 ## اتصال به پروژه Supabase
 
-۱. migrationهای قبلی و سپس `20261023140000_growth.sql` و `20261023141000_growth_copy.sql` را با فرایند migration پروژه اعمال کنید. migration دوم فقط متن seed دست‌نخورده را به‌روز می‌کند و محتوای سفارشی مدیر را حفظ می‌کند.
-۲. `SUPABASE_URL`، `SUPABASE_PUBLISHABLE_KEY` و `SUPABASE_SERVICE_ROLE_KEY` را در تنظیمات محرمانه سرور قرار دهید. نام هیچ کلید خصوصی نباید با `NEXT_PUBLIC_` شروع شود. Service role فقط در API عمومی server و برای capability مهمان استفاده می‌شود؛ پنل از JWT کاربر و RLS استفاده می‌کند.
+۱. migrationهای قبلی و سپس `20261024052205_growth.sql` و `20261024052214_growth_copy.sql` را با فرایند migration پروژه اعمال کنید. این migrationها در 2026-10-24 روی پروژه Supabase اعمال شدند و نام فایل‌ها با تاریخچه واقعی یکسان است. migration دوم فقط متن seed دست‌نخورده را به‌روز می‌کند و محتوای سفارشی مدیر را حفظ می‌کند.
+۲. `SUPABASE_URL`، `SUPABASE_PUBLISHABLE_KEY` و `SUPABASE_SECRET_KEY` را در تنظیمات محرمانه سرور قرار دهید؛ `SUPABASE_SERVICE_ROLE_KEY` قدیمی فقط fallback است. نام هیچ کلید خصوصی نباید با `NEXT_PUBLIC_` شروع شود. کلید سرور فقط در API عمومی server و برای capability مهمان استفاده می‌شود؛ پنل از JWT کاربر و RLS استفاده می‌کند. helper بررسی UID و ایمیل تأییدشده در schema غیرعمومی `growth_private` است؛ RPCهای سفارش، تکمیل و چت SECURITY INVOKER هستند و به service_role محدودند. پاسخ کارشناس با JWT و سیاست‌های نوشتن مخصوص کارشناس اعمال می‌شود.
 ۳. ایمیل حساب تأییدشده کارشناس باید در `cms_editors` وجود داشته باشد. ساخت حساب، مجوز مدیریت نمی‌دهد. در توابع جدید، UID واقعی `auth.users`، ایمیل تأییدشده و allowlist هم‌زمان بررسی می‌شوند.
 ۴. برای شبیه‌ساز پایدار روی Supabase: `COMMERCE_MODE=simulation` و `ENABLE_CHECKOUT=false`. کمپین از همان نوع `simulation` بسازید. محیط کمپین و سفارش باید یکسان باشد.
-۵. برای sandbox: `COMMERCE_MODE=sandbox`، merchant تست معتبر، `SITE_URL` با HTTPS و callback درگاه مجاز. برای واقعی: `COMMERCE_MODE=live` به‌همراه `ENABLE_CHECKOUT=true`، merchant واقعی و دامنه HTTPS؛ ابتدا قیمت/اقلام/لغو/حریم خصوصی نهایی و آزمایش کنترل‌شده انجام شوند. `BACKOFFICE_LOCAL_HTTP` روی میزبان HTTPS خاموش بماند.
+۵. برای ثبت سفارش واقعی بدون درگاه: `COMMERCE_MODE=live` و `ENABLE_CHECKOUT=false`. فرم سفارش را ذخیره می‌کند و کد پیگیری می‌دهد؛ سفارش دارای مانده pending/پرداخت‌نشده می‌ماند و پرونده خدماتی یا رسید بانکی تولید نمی‌کند. تخفیف صددرصد در همین حالت یک پرونده واقعی با دریافت مدارک بسته ایجاد می‌کند. کمپین را با محیط «واقعی» بسازید؛ این محیط در پنل متناسب با محیط فعلی پیش‌فرض می‌شود. برای فعال‌سازی بعدی sandbox یا درگاه واقعی، علاوه بر mode مربوط، `ENABLE_CHECKOUT=true`، merchant معتبر، `SITE_URL` با HTTPS و callback مجاز لازم‌اند؛ ابتدا قیمت/اقلام/لغو/حریم خصوصی نهایی و آزمایش کنترل‌شده انجام شوند. نبود flag صریح حتی با merchant موجود درگاه را می‌بندد. `BACKOFFICE_LOCAL_HTTP` روی میزبان HTTPS خاموش بماند.
 ۶. در Supabase Auth، تأیید ایمیل فعال و URL `/auth/callback` دامنه در Redirect URLs مجاز باشد. لینک PKCE در مرورگر شروع‌کننده باز می‌شود؛ پس از تأیید ایمیل می‌توان با رمز در مرورگر دیگر وارد شد. SMTP و محدودیت ارسال باید جدا آزمایش شوند.
 
 ## مدل داده و وضعیت‌ها
@@ -50,5 +50,7 @@ npm run test:growth
 ```
 
 `test:growth` مسیر واقعی React → Next API → HTTP test double → همان migrationهای PostgreSQL را اجرا می‌کند. رابط Auth/PostgREST مصنوعی است؛ مدرک سازگاری کامل یا دسترسی زنده Supabase محسوب نمی‌شود. PGlite تک‌اتصالی است و جای آزمایش contention با چند اتصال واقعی Postgres را نمی‌گیرد. قرارداد درگاه با fetch مصنوعی تست شده؛ sandbox و پرداخت زنده، SMTP، پیامک و بار چندکاربره میزبانی‌شده در این محیط آزمایش نشده‌اند.
+
+آزمون صریح اتصال واقعی بدون درگاه: پس از build، یک سرور جدا با تنظیمات واقعی `.env.local`، `COMMERCE_MODE=live`، `ENABLE_CHECKOUT=false` و برای HTTP محلی `BACKOFFICE_LOCAL_HTTP=true` روی پورت 3200 اجرا کنید؛ سپس `node --env-file=.env.local --import tsx scripts/qa-growth-live.ts`. این harness با Auth Admin یک حساب مصنوعی بدون ارسال ایمیل می‌سازد، سفارش و کمپین و چت واقعی را با داده مصنوعی تست و رکوردها/حساب همان تست را پاک می‌کند. کلید یا اطلاعات واقعی مشتری در fixture قرار نمی‌گیرد. دامنه این harness فقط localhost است؛ `QA_ORIGIN` برای تغییر پورت محلی است. تست‌ها و `npm run demo` کلیدهای واقعی را override می‌کنند تا `.env.local` موجب اتصال تصادفی آن‌ها به دیتابیس واقعی نشود.
 
 قبل از انتشار: تنظیمات و migration واقعی، تست cross-account/RLS روی Supabase staging، رقابت چند اتصال برای آخرین ظرفیت، تست sandbox زرین‌پال و callback تکراری، SMTP/تأیید ایمیل، سیاست نگهداری چت/سفارش و شرایط لغو باید بررسی شوند. پروژه در این تسک deploy نشده است.

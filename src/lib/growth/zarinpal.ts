@@ -7,6 +7,7 @@ export function gatewaySettings(
   env: Record<string, string | undefined> = process.env,
 ) {
   if (
+    env.ENABLE_CHECKOUT !== "true" ||
     !["live", "sandbox"].includes(mode) ||
     !env.ZARINPAL_MERCHANT_ID ||
     !env.SITE_URL

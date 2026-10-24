@@ -37,6 +37,7 @@ export default defineConfig({
     // Always test the current build, never a process left behind by another run.
     reuseExistingServer: false,
     env: {
+      SUPABASE_SECRET_KEY: "",
       SUPABASE_URL: "http://127.0.0.1:9",
       SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_test_only",
       SUPABASE_SERVICE_ROLE_KEY: "",

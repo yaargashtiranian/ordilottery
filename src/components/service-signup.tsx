@@ -55,7 +55,13 @@ const fields = [
 const labels = ["انتخاب همراهی", "آشنایی کوتاه", "مرور و تصمیم"];
 
 /** Three reversible steps keep the four-field contract; nothing is submitted until explicit confirmation. */
-export function ServiceSignup({ mode }: { mode: CommerceMode }) {
+export function ServiceSignup({
+  mode,
+  paymentsEnabled = false,
+}: {
+  mode: CommerceMode;
+  paymentsEnabled?: boolean;
+}) {
   const [step, setStep] = useState(0);
   const [resume, setResume] = useState("");
   useEffect(() => {
@@ -193,7 +199,11 @@ export function ServiceSignup({ mode }: { mode: CommerceMode }) {
       setResume(data.order.id);
       journeyEvent("complete");
       // A payable bank order goes straight to the provider; the saved order remains recoverable on failure.
-      if (data.order.total_amount > 0 && mode !== "simulation") {
+      if (
+        data.order.total_amount > 0 &&
+        mode !== "simulation" &&
+        paymentsEnabled
+      ) {
         const payment = await experience({ action: "pay", id: data.order.id });
         followCheckout(payment.next);
       } else {
@@ -463,7 +473,9 @@ export function ServiceSignup({ mode }: { mode: CommerceMode }) {
                     ? "بررسی مسیر درخواست"
                     : total === 0
                       ? "تأیید سفارش بدون پرداخت"
-                      : "تأیید و ادامه به پرداخت"}
+                      : paymentsEnabled || mode === "simulation"
+                        ? "تأیید و ادامه به پرداخت"
+                        : "ثبت سفارش و دریافت کد پیگیری"}
             <ArrowLeft size={18} />
           </Button>
         </div>
@@ -473,7 +485,9 @@ export function ServiceSignup({ mode }: { mode: CommerceMode }) {
             ? "پیش‌نمایش مسیر؛ دریافت سفارش هنوز فعال نیست."
             : mode !== "live"
               ? "حالت آزمایشی؛ وجه و پرونده واقعی ایجاد نمی‌شود."
-              : "پرداخت فقط برای خدمات شرکت؛ بدون تضمین انتخاب."}
+              : paymentsEnabled
+                ? "پرداخت فقط برای خدمات شرکت؛ بدون تضمین انتخاب."
+                : "سفارش شما ذخیره می‌شود؛ پرداخت بانکی فعلاً غیرفعال است."}
         </p>
       </form>
       {resume && (

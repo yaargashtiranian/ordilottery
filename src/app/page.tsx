@@ -26,6 +26,7 @@ import { Faq } from "@/components/faq";
 import { brand, officialDvUrl } from "@/lib/site";
 import { getPageContent } from "@/lib/content-store";
 import { commerceMode } from "@/lib/growth/server";
+import { gatewaySettings } from "@/lib/growth/zarinpal";
 
 export const dynamic = "force-dynamic";
 
@@ -117,7 +118,10 @@ export default async function Home() {
               </span>
             </div>
           </div>
-          <ServiceSignup mode={mode} />
+          <ServiceSignup
+            mode={mode}
+            paymentsEnabled={Boolean(gatewaySettings(mode))}
+          />
           <div className="hero-status">
             <CampaignStatus />
             <span className="hero-chapter">

@@ -9,7 +9,13 @@ import { experience, followCheckout } from "@/lib/growth/client";
 import { plans, persianNumber } from "@/lib/site";
 
 /** Always reload authoritative state; URL query strings never determine whether a payment succeeded. */
-export function CheckoutResult({ id }: { id: string }) {
+export function CheckoutResult({
+  id,
+  paymentsEnabled = false,
+}: {
+  id: string;
+  paymentsEnabled?: boolean;
+}) {
   const [order, setOrder] = useState<Order | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -68,7 +74,9 @@ export function CheckoutResult({ id }: { id: string }) {
             ? "این قدم کامل شد!"
             : cancelled
               ? "پرداخت آزمایشی لغو شد"
-              : "یک مرور کوتاه، بعد ادامه"}
+              : order?.mode === "live" && !paymentsEnabled
+                ? "سفارش شما ثبت شد"
+                : "یک مرور کوتاه، بعد ادامه"}
         </h1>
         {!order && !message && <p role="status">در حال دریافت سفارش…</p>}
         {order && (
@@ -132,7 +140,7 @@ export function CheckoutResult({ id }: { id: string }) {
                       شبیه‌سازی انصراف
                     </Button>
                   </>
-                ) : (
+                ) : paymentsEnabled ? (
                   <>
                     <p>
                       انتقال به{" "}
@@ -144,6 +152,21 @@ export function CheckoutResult({ id }: { id: string }) {
                     <Button disabled={busy} onClick={() => pay()}>
                       <CreditCard />
                       {busy ? "در حال ارتباط…" : "ادامه به زرین‌پال"}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      سفارش شما در سیستم ذخیره شده و برای بررسی در دسترس کارشناس
+                      است. پرداخت بانکی فعلاً فعال نیست؛ هیچ وجهی دریافت نشده
+                      است.
+                    </p>
+                    <p>
+                      وضعیت مالی: پرداخت‌نشده. پیگیری این سفارش از همین مرورگر
+                      یا گفت‌وگو با کارشناس امکان‌پذیر است.
+                    </p>
+                    <Button asChild variant="outline">
+                      <Link href="/portal">ورود به پرتال مشتری</Link>
                     </Button>
                   </>
                 )}

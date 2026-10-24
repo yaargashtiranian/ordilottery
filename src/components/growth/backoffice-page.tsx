@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getBackofficeSession } from "@/lib/backoffice-auth";
 import { BackofficeShell } from "@/components/backoffice/shell";
 import { GrowthWorkspace } from "./backoffice-workspace";
+import { commerceMode } from "@/lib/growth/server";
 const titles = {
   campaigns: "کمپین و کد تخفیف",
   chat: "گفت‌وگوی مشتریان",
@@ -37,7 +38,12 @@ export async function GrowthPage({
       title={titles[section]}
       active={section}
     >
-      <GrowthWorkspace section={section} />
+      <GrowthWorkspace
+        section={section}
+        defaultMode={
+          commerceMode() === "disabled" ? "simulation" : commerceMode()
+        }
+      />
     </BackofficeShell>
   );
 }

@@ -50,14 +50,29 @@ test("simulation never provides a bank endpoint; only HTTPS canonical callbacks 
   );
   assert.equal(
     gatewaySettings("sandbox", {
+      ENABLE_CHECKOUT: "true",
       ZARINPAL_MERCHANT_ID: "test",
       SITE_URL: "https://example.com",
     })?.api,
     "https://sandbox.zarinpal.com/pg/v4/payment",
   );
 });
+
+test("disabled gateway cannot create an endpoint even with otherwise complete credentials", () => {
+  for (const mode of ["live", "sandbox"] as const) {
+    assert.equal(
+      gatewaySettings(mode, {
+        ENABLE_CHECKOUT: "false",
+        ZARINPAL_MERCHANT_ID: "synthetic",
+        SITE_URL: "https://example.invalid",
+      }),
+      null,
+    );
+  }
+});
 test("request and verification use the server amount and validated authority, never browser status", async () => {
   const settings = gatewaySettings("sandbox", {
+    ENABLE_CHECKOUT: "true",
     ZARINPAL_MERCHANT_ID: "test",
     SITE_URL: "https://example.com",
   })!;

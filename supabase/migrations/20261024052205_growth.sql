@@ -1,11 +1,15 @@
 -- Campaign/order mutations serialize on the campaign row. The browser never controls prices,
 -- payment state, campaign usage, staff identity or the guest-session hash.
-create function public.growth_is_staff() returns boolean language sql stable security definer set search_path='' as $$
+create schema if not exists growth_private;
+revoke all on schema growth_private from public,anon;
+grant usage on schema growth_private to authenticated;
+-- The only privileged identity lookup is outside the exposed API schema and checks a real Auth UID.
+create function growth_private.is_staff() returns boolean language sql stable security definer set search_path='' as $$
  select exists(select 1 from auth.users u join public.cms_editors e on e.email=lower(u.email)
- where u.id=(select auth.uid()) and u.email_confirmed_at is not null);
+ where (select auth.uid()) is not null and u.id=(select auth.uid()) and u.email_confirmed_at is not null);
 $$;
-revoke all on function public.growth_is_staff() from public,anon;
-grant execute on function public.growth_is_staff() to authenticated;
+revoke all on function growth_private.is_staff() from public,anon;
+grant execute on function growth_private.is_staff() to authenticated;
 
 create table public.growth_campaigns (
  id uuid primary key default gen_random_uuid(),
@@ -86,14 +90,22 @@ do $$ declare tab text; begin
   execute format('grant all on public.%I to service_role',tab);
   if tab<>'growth_rate_limits' then
    execute format('grant select on public.%I to authenticated',tab);
-   execute format('create policy staff_read on public.%I for select to authenticated using ((select public.growth_is_staff()))',tab);
+   execute format('create policy staff_read on public.%I for select to authenticated using ((select growth_private.is_staff()))',tab);
   end if;
  end loop;
 end $$;
 grant insert on public.growth_campaigns to authenticated;
 grant update(active) on public.growth_campaigns to authenticated;
-create policy staff_create on public.growth_campaigns for insert to authenticated with check((select public.growth_is_staff()));
-create policy staff_toggle on public.growth_campaigns for update to authenticated using ((select public.growth_is_staff())) with check((select public.growth_is_staff()));
+create policy staff_create on public.growth_campaigns for insert to authenticated with check((select growth_private.is_staff()));
+create policy staff_toggle on public.growth_campaigns for update to authenticated using ((select growth_private.is_staff())) with check((select growth_private.is_staff()));
+grant insert on public.growth_messages to authenticated;
+grant update(status,updated_at) on public.growth_conversations to authenticated;
+create policy staff_message_insert on public.growth_messages for insert to authenticated with check(sender='staff' and (select growth_private.is_staff()));
+create policy staff_conversation_update on public.growth_conversations for update to authenticated using ((select growth_private.is_staff())) with check((select growth_private.is_staff()));
+-- Service RPCs run as the already-privileged server role, without adding SECURITY DEFINER entrypoints.
+grant select,insert on public.crm_customers,public.crm_cases,public.crm_activity,public.crm_document_access to service_role;
+grant update on public.crm_document_access to service_role;
+grant usage on sequence public.crm_cases_case_number_seq,public.crm_activity_id_seq to service_role;
 
 create function public.growth_limit(p_key text,p_max integer,p_seconds integer) returns boolean
  language plpgsql security invoker set search_path='' as $$
@@ -110,7 +122,7 @@ end $$;
 
 -- The transaction owns the immutable price snapshot. Quote and reserve share exactly this calculation.
 create function public.growth_checkout(p_id uuid,p_guest text,p_hash text,p_applicant jsonb,p_plan text,p_code text,p_mode text,p_reserve boolean,p_expected bigint default null)
- returns jsonb language plpgsql security definer set search_path='' as $$
+ returns jsonb language plpgsql security invoker set search_path='' as $$
 declare c public.growth_campaigns; o public.growth_orders; amount bigint; discount bigint:=0; used integer;
 begin
  if p_mode not in ('simulation','sandbox','live') or p_guest !~ '^[a-f0-9]{64}$' then raise exception 'INVALID'; end if;
@@ -149,7 +161,7 @@ end $$;
 
 -- Completion is idempotent and never marks a government submission or unlocks document intake.
 create function public.growth_complete(p_id uuid,p_kind text,p_reference text default null) returns jsonb
- language plpgsql security definer set search_path='' as $$
+ language plpgsql security invoker set search_path='' as $$
 declare o public.growth_orders; customer_id uuid; new_case_id uuid; campaign_id uuid;
 begin
  -- Share the reservation lock before checking expiration, preventing a last-millisecond completion from overselling.
@@ -172,7 +184,7 @@ end $$;
 
 -- Visitor and staff messages share a timeline separate from crm_ticket_messages, which remain private notes.
 create function public.growth_send_message(p_guest text,p_id uuid,p_body text) returns uuid
- language plpgsql security definer set search_path='' as $$
+ language plpgsql security invoker set search_path='' as $$
 declare cid uuid; previous public.growth_messages;
 begin
  insert into public.growth_conversations(guest_hash) values(p_guest) on conflict(guest_hash) do nothing;
@@ -188,10 +200,10 @@ begin
  return cid;
 end $$;
 create function public.growth_staff_reply(p_conversation uuid,p_id uuid,p_body text,p_close boolean default false) returns void
- language plpgsql security definer set search_path='' as $$
+ language plpgsql security invoker set search_path='' as $$
 declare previous public.growth_messages;
 begin
- if not public.growth_is_staff() then raise exception 'FORBIDDEN' using errcode='42501'; end if;
+ if not growth_private.is_staff() then raise exception 'FORBIDDEN' using errcode='42501'; end if;
  perform 1 from public.growth_conversations where id=p_conversation for update;
  if not found then raise exception 'NOT_FOUND'; end if;
  if p_body<>'' then
